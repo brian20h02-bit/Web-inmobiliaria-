@@ -1,0 +1,81 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+enum Rol {
+  USUARIO
+  ADMINISTRADOR
+}
+
+enum TipoPropiedad {
+  VENTA
+  ALQUILER
+  OTRO
+}
+
+enum EstadoConsulta {
+  PENDIENTE
+  RESPONDIDA
+  CERRADA
+}
+
+model Usuario {
+  id            String     @id @default(uuid())
+  nombre        String
+  email         String     @unique
+  passwordHash  String
+  rol           Rol        @default(USUARIO)
+  fechaRegistro DateTime   @default(now())
+  activo        Boolean    @default(true)
+  propiedades   Propiedad[]
+  consultas     Consulta[]
+  mensajes      Mensaje[]
+}
+
+model Propiedad {
+  id                  String        @id @default(uuid())
+  titulo              String
+  descripcionPublica  String
+  descripcionPrivada  String?
+  tipo                TipoPropiedad
+  precio              Decimal
+  ubicacion           String
+  contacto            String
+  imagenes            String[]
+  destacada           Boolean       @default(false)
+  activa              Boolean       @default(true)
+  fechaPublicacion    DateTime      @default(now())
+  administradorId     String
+  administrador       Usuario       @relation(fields: [administradorId], references: [id])
+  consultas           Consulta[]
+}
+
+model Consulta {
+  id              String         @id @default(uuid())
+  propiedadId     String
+  usuarioId       String
+  asunto          String
+  estado          EstadoConsulta @default(PENDIENTE)
+  leidoPorAdmin   Boolean        @default(false)
+  leidoPorUsuario Boolean        @default(false)
+  fechaCreacion   DateTime       @default(now())
+  propiedad       Propiedad      @relation(fields: [propiedadId], references: [id])
+  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
+  mensajes        Mensaje[]
+}
+
+model Mensaje {
+  id          String   @id @default(uuid())
+  consultaId  String
+  autorId     String
+  contenido   String
+  fecha       DateTime @default(now())
+  consulta    Consulta @relation(fields: [consultaId], references: [id])
+  autor       Usuario  @relation(fields: [autorId], references: [id])
+}
