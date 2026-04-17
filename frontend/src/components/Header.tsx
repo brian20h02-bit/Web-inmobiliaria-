@@ -36,7 +36,6 @@ export default function Header() {
                   <div className="admin-dropdown" onClick={() => setMenuOpen(false)}>
                     <Link to="/admin" className="admin-dropdown-item">Dashboard</Link>
                     <Link to="/admin/propiedades" className="admin-dropdown-item">Propiedades</Link>
-                    <Link to="/admin/consultas" className="admin-dropdown-item">Consultas</Link>
                     <Link to="/admin/usuarios" className="admin-dropdown-item">Usuarios</Link>
                   </div>
                 )}

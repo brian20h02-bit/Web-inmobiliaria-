@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Carrusel from '../components/Carrusel'
 import PropiedadCard from '../components/PropiedadCard'
+import HeroSection from '../components/HeroSection'
+import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 
 const FILTROS = [
@@ -24,6 +27,13 @@ export default function Home() {
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
   const [filtro, setFiltro] = useState('todo')
   const [loading, setLoading] = useState(true)
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  function handleLogout() {
+    logout()
+    navigate('/')
+  }
 
   useEffect(() => {
     api.get('/propiedades/destacadas')
@@ -45,35 +55,60 @@ export default function Home() {
 
   return (
     <div>
-      {destacadas.length > 0 ? (
-        <Carrusel propiedades={destacadas} />
-      ) : (
-        <div className="carrusel-empty">No hay propiedades destacadas en este momento.</div>
-      )}
+      {/* HERO SECTION */}
+      <HeroSection 
+        onComprarClick={() => setFiltro('venta')}
+        onAlquilarClick={() => setFiltro('alquiler')}
+        heroImage="/hero-family.jpg"
+        logoUrl="/logo-paola-castillo.png"
+        user={user}
+        onLogout={handleLogout}
+      />
 
-      <div className="filtros">
-        {FILTROS.map((f) => (
-          <button
-            key={f.value}
-            className={`filtro-btn${filtro === f.value ? ' active' : ''}`}
-            onClick={() => setFiltro(f.value)}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <div className="loading">Cargando propiedades…</div>
-      ) : propiedades.length === 0 ? (
-        <div className="empty">No hay propiedades disponibles.</div>
-      ) : (
-        <div className="grid">
-          {propiedades.map((p) => (
-            <PropiedadCard key={p.id} {...p} />
-          ))}
+      {/* FILTROS SECTION */}
+      <section className="filtros-section">
+        <div className="filtros-container">
+          <div className="filtros">
+            {FILTROS.map((f) => (
+              <button
+                key={f.value}
+                className={`filtro-btn${filtro === f.value ? ' active' : ''}`}
+                onClick={() => setFiltro(f.value)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+      </section>
+
+      {/* CARRUSEL SECTION */}
+      <section className="carrusel-section">
+        <div className="carrusel-container">
+          {destacadas.length > 0 ? (
+            <Carrusel propiedades={destacadas} />
+          ) : (
+            <div className="carrusel-empty">No hay propiedades destacadas en este momento.</div>
+          )}
+        </div>
+      </section>
+
+      {/* PROPIEDADES GRID SECTION */}
+      <section className="propiedades-section">
+        <div className="propiedades-container">
+          {loading ? (
+            <div className="loading">Cargando propiedades…</div>
+          ) : propiedades.length === 0 ? (
+            <div className="empty">No hay propiedades disponibles.</div>
+          ) : (
+            <div className="grid">
+              {propiedades.map((p) => (
+                <PropiedadCard key={p.id} {...p} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   )
 }

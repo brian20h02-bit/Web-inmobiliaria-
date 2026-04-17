@@ -71,7 +71,7 @@ const propiedadBase = {
 // ── Tests unitarios: obtenerDetalle ───────────────────────────────────────────
 
 describe('obtenerDetalle', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('sin token → solo datos públicos (sin precio, ubicacion, contacto)', async () => {
     vi.mocked(prisma.propiedad.findUnique).mockResolvedValue(propiedadBase as never);
@@ -137,7 +137,7 @@ describe('obtenerDetalle', () => {
 // ── Tests unitarios: listar ───────────────────────────────────────────────────
 
 describe('listar', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('filtro por tipo → solo propiedades del tipo solicitado', async () => {
     const propVenta = { ...propiedadBase, tipo: 'VENTA' };
@@ -173,7 +173,7 @@ describe('listar', () => {
 // ── Property tests ────────────────────────────────────────────────────────────
 
 describe('Property tests de propiedades', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   /**
    * Propiedad 10: Listado público nunca expone datos sensibles

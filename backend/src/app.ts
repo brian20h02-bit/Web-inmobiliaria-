@@ -4,8 +4,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import authRouter from './routes/auth';
 import propiedadesRouter from './routes/propiedades';
-import consultasRouter from './routes/consultas';
 import adminRouter from './routes/admin';
+import chatRouter from './routes/chat';
 
 const app = express();
 
@@ -56,8 +56,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // ── Rutas ─────────────────────────────────────────────────────────────────────
 app.use('/auth', authRouter);
 app.use('/propiedades', propiedadesRouter);
-app.use('/consultas', consultasRouter);
 app.use('/admin', adminRouter);
+app.use('/chat', chatRouter);
 
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });

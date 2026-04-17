@@ -46,8 +46,8 @@ export async function crear(req: Request, res: Response): Promise<void> {
         usuarioId,
         asunto,
         estado: 'PENDIENTE',
-        leidoPorAdmin: false, // Mark as unread for admin
-        leidoPorUsuario: false, // Mark as unread for user too
+        leidoPorAdmin: false, // Admin no la ha leído aún
+        leidoPorUsuario: true, // El usuario que la crea ya la conoce
         mensajes: {
           create: {
             autorId: usuarioId,
@@ -237,6 +237,7 @@ export async function responder(req: Request, res: Response): Promise<void> {
     // Marcar como no leída para el usuario si el admin responde
     if (esAdmin) {
       updateData.leidoPorUsuario = false;
+      console.log(`[responder] Admin respondiendo consulta ${id}. Marcando como no leída para usuario.`);
     }
     
     const consultaActualizada = await prisma.consulta.update({
@@ -244,6 +245,8 @@ export async function responder(req: Request, res: Response): Promise<void> {
       data: updateData,
       include: { mensajes: { orderBy: { fecha: 'asc' } } },
     });
+
+    console.log(`[responder] ✅ Respuesta agregada a consulta ${id} | Estado: ${consultaActualizada.estado}`);
 
     res.json(consultaActualizada);
   } catch {

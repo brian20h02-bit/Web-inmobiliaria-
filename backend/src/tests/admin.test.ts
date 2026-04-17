@@ -43,7 +43,7 @@ function mockReq(user?: { id: string; email: string; rol: string }): Request {
 // ── Tests: GET /admin/resumen ─────────────────────────────────────────────────
 
 describe('resumen', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('token admin → retorna propiedadesActivas, totalUsuarios, consultasPendientes', async () => {
     vi.mocked(prisma.propiedad.count).mockResolvedValue(10);
@@ -88,7 +88,7 @@ describe('resumen', () => {
 // ── Tests: GET /admin/usuarios ────────────────────────────────────────────────
 
 describe('listarUsuarios', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); });
 
   it('token admin → lista de usuarios sin passwordHash', async () => {
     const usuarios = [

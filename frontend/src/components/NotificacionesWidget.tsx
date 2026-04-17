@@ -23,9 +23,9 @@ export default function NotificacionesWidget() {
   const [consultas, setConsultas] = useState<Consulta[]>([])
   const [consultasNoLeidas, setConsultasNoLeidas] = useState<Consulta[]>([])
   const [totalNoLeidas, setTotalNoLeidas] = useState(0)
-  const [conteoAnterior, setConteoAnterior] = useState(0)
   const [loading, setLoading] = useState(false)
   const [filtro, setFiltro] = useState<'todas' | 'no-leidas'>('todas')
+  const [consultasNotificadas, setConsultasNotificadas] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (!user) return
@@ -86,27 +86,30 @@ export default function NotificacionesWidget() {
       
       const totalNuevo = noLeidas.length
 
-      console.log(`[NotificacionesWidget] ${esAdmin ? 'ADMIN' : 'USUARIO'} ${user.email}: ${totalNuevo} no leídas (anterior: ${conteoAnterior}), total: ${todasLasConsultas.length}`)
+      console.log(`[NotificacionesWidget] ${esAdmin ? 'ADMIN' : 'USUARIO'} ${user.email}: ${totalNuevo} no leídas, total: ${todasLasConsultas.length}`)
       
-      // Debug: mostrar detalles de las no leídas
-      if (esAdmin && totalNuevo > 0) {
-        console.log('[NotificacionesWidget] Consultas sin leer para admin:', noLeidas.map((c: Consulta) => ({ id: c.id, asunto: c.asunto, leidoPorAdmin: c.leidoPorAdmin })))
-      }
-
-      // Si hay nuevas consultas, reproducir sonido
-      if (totalNuevo > conteoAnterior && conteoAnterior > 0) {
-        console.log('[NotificacionesWidget] 🔔 Reproducing notification sound...')
+      // Verificar si hay nuevas consultas no notificadas
+      const consultasNoNotificadas = noLeidas.filter((c: Consulta) => !consultasNotificadas.has(c.id))
+      
+      if (consultasNoNotificadas.length > 0) {
+        console.log(`[NotificacionesWidget] 🔔 ${consultasNoNotificadas.length} consulta(s) nueva(s) - reproduciendo sonido`)
+        
+        // Tocar sonido para CADA consulta nueva
         try {
           playNotificationSound()
         } catch (error) {
           console.error('[NotificacionesWidget] Error playing sound:', error)
         }
+        
+        // Agregar estos IDs a las notificadas
+        const newNotificadas = new Set(consultasNotificadas)
+        consultasNoNotificadas.forEach((c: Consulta) => newNotificadas.add(c.id))
+        setConsultasNotificadas(newNotificadas)
       }
 
       setConsultas(todasLasConsultas)
       setConsultasNoLeidas(noLeidas)
       setTotalNoLeidas(totalNuevo)
-      setConteoAnterior(totalNuevo)
     } catch (error: any) {
       console.error('[NotificacionesWidget] ❌ Error:', error.response?.data || error.message)
       setConsultas([])
@@ -234,8 +237,8 @@ export default function NotificacionesWidget() {
         }
 
         .notificaciones-btn {
-          background: #007bff;
-          color: white;
+          background: #6E88B0;
+          color: #F2E0D0;
           border: none;
           padding: 12px 20px;
           border-radius: 50px;
@@ -246,13 +249,13 @@ export default function NotificacionesWidget() {
           align-items: center;
           gap: 8px;
           transition: all 0.3s;
-          box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+          box-shadow: 0 4px 12px rgba(110, 136, 176, 0.4);
           font-size: 15px;
         }
 
         .notificaciones-btn:hover {
-          background: #0056b3;
-          box-shadow: 0 6px 16px rgba(0, 123, 255, 0.6);
+          background: #4A5F85;
+          box-shadow: 0 6px 16px rgba(110, 136, 176, 0.6);
           transform: translateY(-2px);
         }
 
@@ -287,7 +290,7 @@ export default function NotificacionesWidget() {
           position: absolute;
           bottom: 100%;
           right: 0;
-          background: white;
+          background: #F2E0D0;
           border: 1px solid #ddd;
           border-radius: 12px;
           box-shadow: 0 8px 24px rgba(0,0,0,0.15);
@@ -317,7 +320,7 @@ export default function NotificacionesWidget() {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          background: linear-gradient(to right, #f8f9fa, #fff);
+          background: linear-gradient(to right, #E8D4BE, #F2E0D0);
         }
 
         .notificaciones-header h3 {
@@ -353,14 +356,14 @@ export default function NotificacionesWidget() {
           padding: 8px;
           border-bottom: 1px solid #eee;
           gap: 8px;
-          background: #f8f9fa;
+          background: #E8D4BE;
         }
 
         .filtro-tab {
           flex: 1;
           padding: 8px 12px;
           border: none;
-          background: white;
+          background: #F2E0D0;
           border-radius: 6px;
           cursor: pointer;
           font-size: 12px;
@@ -371,14 +374,14 @@ export default function NotificacionesWidget() {
         }
 
         .filtro-tab:hover {
-          border-color: #007bff;
-          color: #007bff;
+          border-color: #6E88B0;
+          color: #6E88B0;
         }
 
         .filtro-tab.activo {
-          background: #007bff;
-          color: white;
-          border-color: #007bff;
+          background: #6E88B0;
+          color: #F2E0D0;
+          border-color: #6E88B0;
         }
 
         .notificaciones-list {
@@ -392,17 +395,17 @@ export default function NotificacionesWidget() {
         }
 
         .notificaciones-list::-webkit-scrollbar-track {
-          background: #f1f1f1;
+          background: #E8D4BE;
           border-radius: 10px;
         }
 
         .notificaciones-list::-webkit-scrollbar-thumb {
-          background: #bbb;
+          background: #6E88B0;
           border-radius: 10px;
         }
 
         .notificaciones-list::-webkit-scrollbar-thumb:hover {
-          background: #888;
+          background: #4A5F85;
         }
 
         .notificacion-item {
@@ -412,18 +415,18 @@ export default function NotificacionesWidget() {
           margin-bottom: 8px;
           cursor: pointer;
           transition: all 0.2s;
-          background: white;
+          background: #F2E0D0;
         }
 
         .notificacion-item:hover {
-          background: #f8f9fa;
-          border-color: #007bff;
-          box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+          background: #E8D4BE;
+          border-color: #6E88B0;
+          box-shadow: 0 2px 8px rgba(110, 136, 176, 0.15);
         }
 
         .notificacion-item.no-leida {
           border-left: 4px solid #dc3545;
-          background: #fff8f9;
+          background: #FFF5F5;
         }
 
         .notificacion-item.leida {
@@ -475,14 +478,14 @@ export default function NotificacionesWidget() {
         .notificaciones-footer {
           padding: 12px;
           border-top: 1px solid #eee;
-          background: #f8f9fa;
+          background: #E8D4BE;
         }
 
         .btn-ver-todos {
           width: 100%;
           padding: 10px;
-          background: #28a745;
-          color: white;
+          background: #6E88B0;
+          color: #F2E0D0;
           border: none;
           border-radius: 6px;
           cursor: pointer;
@@ -492,7 +495,7 @@ export default function NotificacionesWidget() {
         }
 
         .btn-ver-todos:hover {
-          background: #218838;
+          background: #4A5F85;
         }
 
         .text-center {

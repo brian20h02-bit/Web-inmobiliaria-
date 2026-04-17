@@ -88,6 +88,13 @@ export default function HiloConsulta() {
       setMensajes(response.data.mensajes || response.data.data || [])
       setConsulta(response.data)
       setNuevoMensaje('')
+      
+      // Disparar evento para notificar a ambos usuarios
+      console.log('[HiloConsulta] Mensaje enviado - notificando a widget');
+      window.dispatchEvent(new Event('respuestaEnviada'));
+      
+      // Si el usuario que responde es admin, también notifico
+      // El widget escuchará y recargará para el otro usuario
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error al enviar el mensaje')
     } finally {

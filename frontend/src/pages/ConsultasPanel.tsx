@@ -193,7 +193,7 @@ export default function ConsultasPanel() {
       <style>{`
         .consultas-panel-container {
           padding: 24px;
-          background: linear-gradient(to bottom, #f8f9fa, #fff);
+          background: linear-gradient(to bottom, #E8D4BE, #F2E0D0);
           min-height: 100vh;
         }
 
@@ -204,7 +204,7 @@ export default function ConsultasPanel() {
         .btn-volver {
           background: none;
           border: none;
-          color: #007bff;
+          color: #6E88B0;
           cursor: pointer;
           font-size: 14px;
           font-weight: 500;
@@ -214,7 +214,7 @@ export default function ConsultasPanel() {
         }
 
         .btn-volver:hover {
-          color: #0056b3;
+          color: #4A5F85;
         }
 
         .consultas-panel-header h1 {
@@ -233,7 +233,7 @@ export default function ConsultasPanel() {
           padding: 8px 16px;
           border: 2px solid #ddd;
           border-radius: 6px;
-          background: white;
+          background: #F2E0D0;
           cursor: pointer;
           font-weight: 500;
           font-size: 13px;
@@ -242,14 +242,14 @@ export default function ConsultasPanel() {
         }
 
         .filtro-btn:hover {
-          border-color: #007bff;
-          color: #007bff;
+          border-color: #6E88B0;
+          color: #6E88B0;
         }
 
         .filtro-btn.activo {
-          background: #007bff;
-          border-color: #007bff;
-          color: white;
+          background: #6E88B0;
+          border-color: #6E88B0;
+          color: #F2E0D0;
         }
 
         .consultas-panel-content {
@@ -271,7 +271,7 @@ export default function ConsultasPanel() {
         }
 
         .consulta-card {
-          background: white;
+          background: #F2E0D0;
           border: 2px solid #e9ecef;
           border-radius: 12px;
           overflow: hidden;
@@ -283,8 +283,8 @@ export default function ConsultasPanel() {
         }
 
         .consulta-card:hover {
-          border-color: #007bff;
-          box-shadow: 0 4px 16px rgba(0, 123, 255, 0.15);
+          border-color: #6E88B0;
+          box-shadow: 0 4px 16px rgba(110, 136, 176, 0.15);
           transform: translateY(-2px);
         }
 
@@ -396,15 +396,15 @@ export default function ConsultasPanel() {
 
         .consulta-card-footer {
           padding: 12px 16px;
-          background: #f8f9fa;
+          background: #E8D4BE;
           border-top: 1px solid #eee;
         }
 
         .btn-ver-detalles {
           width: 100%;
           padding: 10px;
-          background: #007bff;
-          color: white;
+          background: #6E88B0;
+          color: #F2E0D0;
           border: none;
           border-radius: 6px;
           cursor: pointer;
@@ -414,7 +414,7 @@ export default function ConsultasPanel() {
         }
 
         .btn-ver-detalles:hover {
-          background: #0056b3;
+          background: #4A5F85;
         }
 
         @media (max-width: 768px) {

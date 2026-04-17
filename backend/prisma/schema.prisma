@@ -1,11 +1,99 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-generator client {
-  provider      = "prisma-client-js"
-  binaryTargets = ["native"]
+model Usuario {
+  id                      String         @id @default(uuid())
+  nombre                  String
+  email                   String         @unique
+  passwordHash            String
+  rol                     Rol            @default(USUARIO)
+  fechaRegistro           DateTime       @default(now())
+  activo                  Boolean        @default(true)
+  consultas               Consulta[]
+  conversacionesRecibidas Conversacion[] @relation("admin")
+  conversacionesIniciadas Conversacion[] @relation("usuario")
+  mensajes                Mensaje[]
+  mensajesChat            MensajeChat[]
+  propiedades             Propiedad[]
+}
+
+model Propiedad {
+  id                 String        @id @default(uuid())
+  titulo             String
+  descripcionPublica String
+  descripcionPrivada String?
+  tipo               TipoPropiedad
+  precio             Decimal
+  ubicacion          String
+  contacto           String
+  imagenes           String[]
+  destacada          Boolean       @default(false)
+  activa             Boolean       @default(true)
+  fechaPublicacion   DateTime      @default(now())
+  administradorId    String
+  consultas          Consulta[]
+  conversaciones     Conversacion[]
+  administrador      Usuario       @relation(fields: [administradorId], references: [id])
+}
+
+model Consulta {
+  id              String         @id @default(uuid())
+  propiedadId     String
+  usuarioId       String
+  asunto          String
+  estado          EstadoConsulta @default(PENDIENTE)
+  fechaCreacion   DateTime       @default(now())
+  leidoPorAdmin   Boolean        @default(false)
+  leidoPorUsuario Boolean        @default(false)
+  propiedad       Propiedad      @relation(fields: [propiedadId], references: [id])
+  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
+  mensajes        Mensaje[]
+}
+
+model Mensaje {
+  id         String   @id @default(uuid())
+  consultaId String
+  autorId    String
+  contenido  String
+  fecha      DateTime @default(now())
+  autor      Usuario  @relation(fields: [autorId], references: [id])
+  consulta   Consulta @relation(fields: [consultaId], references: [id])
+}
+
+model Conversacion {
+  id             String        @id @default(uuid())
+  usuarioId      String
+  adminId        String
+  propiedadId    String?
+  fechaCreacion  DateTime      @default(now())
+  fechaActualiza DateTime      @updatedAt
+  admin          Usuario       @relation("admin", fields: [adminId], references: [id], onDelete: Cascade)
+  usuario        Usuario       @relation("usuario", fields: [usuarioId], references: [id], onDelete: Cascade)
+  propiedad      Propiedad?    @relation(fields: [propiedadId], references: [id], onDelete: SetNull)
+  mensajes       MensajeChat[]
+
+  @@unique([usuarioId, adminId, propiedadId])
+}
+
+model MensajeChat {
+  id             String       @id @default(uuid())
+  conversacionId String
+  emisorId       String
+  contenido      String
+  leido          Boolean      @default(false)
+  fecha          DateTime     @default(now())
+  conversacion   Conversacion @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+  emisor         Usuario      @relation(fields: [emisorId], references: [id])
+
+  @@index([conversacionId])
+  @@index([emisorId])
 }
 
 enum Rol {
@@ -23,59 +111,4 @@ enum EstadoConsulta {
   PENDIENTE
   RESPONDIDA
   CERRADA
-}
-
-model Usuario {
-  id            String     @id @default(uuid())
-  nombre        String
-  email         String     @unique
-  passwordHash  String
-  rol           Rol        @default(USUARIO)
-  fechaRegistro DateTime   @default(now())
-  activo        Boolean    @default(true)
-  propiedades   Propiedad[]
-  consultas     Consulta[]
-  mensajes      Mensaje[]
-}
-
-model Propiedad {
-  id                  String        @id @default(uuid())
-  titulo              String
-  descripcionPublica  String
-  descripcionPrivada  String?
-  tipo                TipoPropiedad
-  precio              Decimal
-  ubicacion           String
-  contacto            String
-  imagenes            String[]
-  destacada           Boolean       @default(false)
-  activa              Boolean       @default(true)
-  fechaPublicacion    DateTime      @default(now())
-  administradorId     String
-  administrador       Usuario       @relation(fields: [administradorId], references: [id])
-  consultas           Consulta[]
-}
-
-model Consulta {
-  id              String         @id @default(uuid())
-  propiedadId     String
-  usuarioId       String
-  asunto          String
-  estado          EstadoConsulta @default(PENDIENTE)
-  leidoPorAdmin   Boolean        @default(false)
-  leidoPorUsuario Boolean        @default(false)
-  fechaCreacion   DateTime       @default(now())
-  propiedad       Propiedad      @relation(fields: [propiedadId], references: [id])
-  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
-  mensajes        Mensaje[]
-}
-
-model Mensaje {
-  id          String   @id @default(uuid())
-  consultaId  String
-  autorId     String
-  contenido   String
-  fecha       DateTime @default(now())
-  consulta    Consulta @relation(fields: [consultaId], references: [id])
-  autor       Usuario  @relation(fields: [autorId], references: [id])
 }

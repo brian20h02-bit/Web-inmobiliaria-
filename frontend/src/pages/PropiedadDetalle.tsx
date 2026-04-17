@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useChat } from '../context/ChatContext'
 import api from '../lib/api'
 
 interface Propiedad {
@@ -18,16 +19,12 @@ interface Propiedad {
 export default function PropiedadDetalle() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
+  const { consultarPropiedad, isLoading: chatLoading } = useChat()
   const navigate = useNavigate()
   const [propiedad, setPropiedad] = useState<Propiedad | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-
-  // Consulta form
-  const [asunto, setAsunto] = useState('')
-  const [mensaje, setMensaje] = useState('')
-  const [consultaMsg, setConsultaMsg] = useState('')
-  const [consultaError, setConsultaError] = useState('')
+  const [consultaEnviada, setConsultaEnviada] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -40,26 +37,10 @@ export default function PropiedadDetalle() {
       .finally(() => setLoading(false))
   }, [id, user])
 
-  async function handleConsulta(e: React.FormEvent) {
-    e.preventDefault()
-    setConsultaError('')
-    setConsultaMsg('')
-    try {
-      console.log(`[PropiedadDetalle] Enviando consulta a propiedad ${id}:`, { asunto, mensaje: mensaje.substring(0, 50) + '...' })
-      const response = await api.post('/consultas', { propiedadId: id, asunto, mensaje })
-      console.log('[PropiedadDetalle] ✅ Consulta enviada:', response.data.id)
-      setConsultaMsg('Consulta enviada correctamente.')
-      setAsunto('')
-      setMensaje('')
-    } catch (e: unknown) {
-      const err = e as { response?: { status?: number; data?: { error?: string } } }
-      console.error('[PropiedadDetalle] ❌ Error:', err.response?.status, err.response?.data?.error)
-      if (err.response?.status === 409) {
-        setConsultaError('Ya tenés una consulta abierta sobre esta propiedad.')
-      } else {
-        setConsultaError(err.response?.data?.error ?? 'Error al enviar la consulta.')
-      }
-    }
+  async function handleConsultarPropiedad() {
+    if (!propiedad || !id) return
+    setConsultaEnviada(true)
+    await consultarPropiedad(id, propiedad.titulo)
   }
 
   if (loading) return <div className="loading">Cargando…</div>
@@ -113,36 +94,29 @@ export default function PropiedadDetalle() {
         )}
       </div>
 
-      {user && (
-        <div className="detalle-consulta">
-          <h2>Enviar consulta</h2>
-          {consultaMsg && <p className="success-msg">{consultaMsg}</p>}
-          {consultaError && <p className="error-msg">{consultaError}</p>}
-          <form onSubmit={handleConsulta} className="form">
-            <div className="form-group">
-              <label htmlFor="asunto">Asunto</label>
-              <input
-                id="asunto"
-                type="text"
-                value={asunto}
-                onChange={(e) => setAsunto(e.target.value)}
-                required
-                className="form-input"
-              />
+      {user && user.rol === 'USUARIO' && (
+        <div className="detalle-consulta-chat">
+          {consultaEnviada ? (
+            <div className="consulta-enviada-msg">
+              <span className="consulta-check">✓</span>
+              <p>Tu consulta fue enviada. Revisá el chat para seguir la conversación.</p>
             </div>
-            <div className="form-group">
-              <label htmlFor="mensaje">Mensaje</label>
-              <textarea
-                id="mensaje"
-                value={mensaje}
-                onChange={(e) => setMensaje(e.target.value)}
-                required
-                rows={4}
-                className="form-input"
-              />
-            </div>
-            <button type="submit" className="btn btn-primary">Enviar consulta</button>
-          </form>
+          ) : (
+            <button
+              className="btn-consultar-propiedad"
+              onClick={handleConsultarPropiedad}
+              disabled={chatLoading}
+            >
+              {chatLoading ? (
+                <span>Abriendo chat...</span>
+              ) : (
+                <>
+                  <span className="btn-consultar-icon">💬</span>
+                  <span>Consultar por esta propiedad</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       )}
     </div>

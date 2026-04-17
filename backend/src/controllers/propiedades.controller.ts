@@ -140,6 +140,30 @@ export async function crear(req: Request, res: Response): Promise<void> {
     const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, ubicacion, contacto, imagenBase64, imagenes } = parsed.data;
     const administradorId = req.user!.id;
 
+    console.log('📝 Crear propiedad - Usuario:', {
+      userId: administradorId,
+      email: req.user?.email,
+      rol: req.user?.rol,
+      titulo,
+    });
+
+    // Verificar que el usuario existe en la BD
+    const usuarioExiste = await prisma.usuario.findUnique({
+      where: { id: administradorId },
+    });
+
+    if (!usuarioExiste) {
+      console.error('❌ Usuario no encontrado en BD:', administradorId);
+      res.status(401).json({ error: 'Usuario no encontrado. Por favor inicia sesión nuevamente.' });
+      return;
+    }
+
+    if (usuarioExiste.rol !== 'ADMINISTRADOR') {
+      console.error('❌ Usuario no es administrador:', administradorId);
+      res.status(403).json({ error: 'Solo los administradores pueden crear propiedades.' });
+      return;
+    }
+
     // Procesar imagen base64 con Cloudinary si existe
     let imagenesFinales: string[] = imagenes || [];
     if (imagenBase64) {
@@ -188,9 +212,10 @@ export async function crear(req: Request, res: Response): Promise<void> {
       },
     });
 
+    console.log('✅ Propiedad creada:', propiedad.id);
     res.status(201).json(propiedad);
   } catch (error: any) {
-    console.error('Error al crear propiedad:', error);
+    console.error('❌ Error al crear propiedad:', error.message || error);
     res.status(500).json({ error: error?.message || 'Error interno del servidor' });
   }
 }
