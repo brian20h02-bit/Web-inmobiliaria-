@@ -1,17 +1,20 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import Carrusel from '../components/Carrusel'
 import PropiedadCard from '../components/PropiedadCard'
+import PropiedadModal from '../components/PropiedadModal'
 import HeroSection from '../components/HeroSection'
+import FiltrosFlotantes, { type FiltrosState } from '../components/FiltrosFlotantes'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 
-const FILTROS = [
-  { label: 'Ver todo', value: 'todo' },
-  { label: 'Comprar', value: 'venta' },
-  { label: 'Alquilar', value: 'alquiler' },
-  { label: 'Otros', value: 'otro' },
-]
+const FILTROS_INIT: FiltrosState = { tipo: 'todo', ciudad: '', tipoPropiedad: '', ambientes: '', banos: '' }
+
+function formatPrecio(precio: number | string | undefined): string {
+  if (!precio) return ''
+  const num = typeof precio === 'string' ? parseFloat(precio) : precio
+  if (isNaN(num)) return ''
+  return 'US$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+}
 
 interface Propiedad {
   id: string
@@ -31,10 +34,50 @@ interface Propiedad {
 export default function Home() {
   const [destacadas, setDestacadas] = useState<Propiedad[]>([])
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
-  const [filtro, setFiltro] = useState('todo')
+  const [filtros, setFiltros] = useState<FiltrosState>(FILTROS_INIT)
   const [loading, setLoading] = useState(true)
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const filtrosSectionRef = useRef<HTMLElement>(null)
+  const [isSticky, setIsSticky] = useState(false)
+
+  /* ── Showcase carousel state ── */
+  const [slideIdx, setSlideIdx] = useState(0)
+  const [isHovering, setIsHovering] = useState(false)
+  const [slideDir, setSlideDir] = useState<'next' | 'prev'>('next')
+  const [modalId, setModalId] = useState<string | null>(null)
+  const SLIDE_SIZE = 3
+
+  const totalSlides = Math.max(1, Math.ceil(destacadas.length / SLIDE_SIZE))
+
+  const goNext = useCallback(() => {
+    setSlideDir('next')
+    setSlideIdx((i) => (i + 1) % totalSlides)
+  }, [totalSlides])
+
+  const goPrev = useCallback(() => {
+    setSlideDir('prev')
+    setSlideIdx((i) => (i - 1 + totalSlides) % totalSlides)
+  }, [totalSlides])
+
+  // Autoplay (5s)
+  useEffect(() => {
+    if (isHovering || totalSlides <= 1) return
+    const timer = setInterval(goNext, 5000)
+    return () => clearInterval(timer)
+  }, [isHovering, totalSlides, goNext])
+
+  // Sticky detection via IntersectionObserver
+  useEffect(() => {
+    const el = filtrosSectionRef.current
+    if (!el) return
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsSticky(entry.intersectionRatio < 1),
+      { threshold: [1], rootMargin: '-1px 0px 0px 0px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   function handleLogout() {
     logout()
@@ -49,59 +92,142 @@ export default function Home() {
 
   useEffect(() => {
     setLoading(true)
-    const params = filtro !== 'todo' ? { tipo: filtro.toUpperCase() } : {}
+    const params: Record<string, string> = {}
+    if (filtros.tipo !== 'todo') params.tipo = filtros.tipo.toUpperCase()
     api.get('/propiedades', { params })
       .then((r) => {
         const data = r.data
-        setPropiedades(Array.isArray(data) ? data : data.propiedades ?? [])
+        let list: Propiedad[] = Array.isArray(data) ? data : data.propiedades ?? []
+
+        // Client-side sub-filters
+        if (filtros.ciudad) {
+          const q = filtros.ciudad.toLowerCase()
+          list = list.filter((p) => p.ubicacion?.toLowerCase().includes(q))
+        }
+        if (filtros.ambientes) {
+          const n = parseInt(filtros.ambientes)
+          list = list.filter((p) => p.ambientes === n)
+        }
+        if (filtros.banos) {
+          const n = parseInt(filtros.banos)
+          list = list.filter((p) => p.banos === n)
+        }
+
+        setPropiedades(list)
       })
       .catch(() => setPropiedades([]))
       .finally(() => setLoading(false))
-  }, [filtro])
+  }, [filtros])
+
+  // Current slide items
+  const slideItems = destacadas.slice(slideIdx * SLIDE_SIZE, slideIdx * SLIDE_SIZE + SLIDE_SIZE)
 
   return (
     <div>
       {/* HERO SECTION */}
       <HeroSection 
-        onComprarClick={() => setFiltro('venta')}
-        onAlquilarClick={() => setFiltro('alquiler')}
+        onComprarClick={() => setFiltros({ ...FILTROS_INIT, tipo: 'venta' })}
+        onAlquilarClick={() => setFiltros({ ...FILTROS_INIT, tipo: 'alquiler' })}
         heroImage="/hero-family.jpg"
         logoUrl="/logo-paola-castillo.png"
         user={user}
         onLogout={handleLogout}
       />
 
-      {/* CARRUSEL SECTION */}
-      <section className="carrusel-section">
-        <div className="carrusel-container">
-          {destacadas.length > 0 ? (
-            <Carrusel propiedades={destacadas} />
-          ) : (
-            <div className="carrusel-empty">No hay propiedades destacadas en este momento.</div>
-          )}
-        </div>
-      </section>
+      {/* SHOWCASE CAROUSEL */}
+      {destacadas.length > 0 && (
+        <section
+          className="showcase-section"
+          onMouseEnter={() => setIsHovering(true)}
+          onMouseLeave={() => setIsHovering(false)}
+        >
+          <div className="showcase-container">
+            <div className="showcase-header">
+              <h2 className="section-heading">Propiedades destacadas</h2>
+              {totalSlides > 1 && (
+                <div className="showcase-nav-dots">
+                  {Array.from({ length: totalSlides }).map((_, i) => (
+                    <button
+                      key={i}
+                      className={`showcase-dot${i === slideIdx ? ' active' : ''}`}
+                      onClick={() => { setSlideDir(i > slideIdx ? 'next' : 'prev'); setSlideIdx(i) }}
+                      aria-label={`Slide ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="showcase-viewport">
+              {/* Arrows */}
+              {totalSlides > 1 && (
+                <>
+                  <button className="showcase-arrow showcase-arrow-l" onClick={goPrev} aria-label="Anterior">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
+                  <button className="showcase-arrow showcase-arrow-r" onClick={goNext} aria-label="Siguiente">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
+                </>
+              )}
+
+              <div className={`showcase-grid showcase-slide-${slideDir}`} key={slideIdx}>
+                {/* Main card */}
+                {slideItems[0] && (
+                  <div onClick={() => setModalId(slideItems[0].id)} className="showcase-card showcase-card-main" role="button" tabIndex={0}>
+                    <div className="showcase-card-img-wrap">
+                      {slideItems[0].imagenes?.[0] && <img src={slideItems[0].imagenes[0]} alt={slideItems[0].titulo} className="showcase-card-img" loading="lazy" />}
+                      <div className="showcase-card-overlay" />
+                    </div>
+                    <div className="showcase-card-info">
+                      <span className={`showcase-badge ${slideItems[0].tipo === 'VENTA' ? 'badge-venta' : slideItems[0].tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'}`}>
+                        {slideItems[0].tipo === 'VENTA' ? 'Venta' : slideItems[0].tipo === 'ALQUILER' ? 'Alquiler' : slideItems[0].tipo}
+                      </span>
+                      <h3 className="showcase-card-title">{slideItems[0].titulo}</h3>
+                      {slideItems[0].ubicacion && <p className="showcase-card-loc">{slideItems[0].ubicacion}</p>}
+                      {slideItems[0].precio && <span className="showcase-card-price">{formatPrecio(slideItems[0].precio)}</span>}
+                    </div>
+                  </div>
+                )}
+
+                {/* Side stack */}
+                {slideItems.length > 1 && (
+                  <div className="showcase-side">
+                    {slideItems.slice(1, 3).map((d) => (
+                      <div onClick={() => setModalId(d.id)} className="showcase-card showcase-card-small" key={d.id} role="button" tabIndex={0}>
+                        <div className="showcase-card-img-wrap">
+                          {d.imagenes?.[0] && <img src={d.imagenes[0]} alt={d.titulo} className="showcase-card-img" loading="lazy" />}
+                          <div className="showcase-card-overlay" />
+                        </div>
+                        <div className="showcase-card-info">
+                          <span className={`showcase-badge ${d.tipo === 'VENTA' ? 'badge-venta' : d.tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'}`}>
+                            {d.tipo === 'VENTA' ? 'Venta' : d.tipo === 'ALQUILER' ? 'Alquiler' : d.tipo}
+                          </span>
+                          <h3 className="showcase-card-title">{d.titulo}</h3>
+                          {d.ubicacion && <p className="showcase-card-loc">{d.ubicacion}</p>}
+                          {d.precio && <span className="showcase-card-price">{formatPrecio(d.precio)}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* FILTROS SECTION */}
-      <section className="filtros-section">
+      <section ref={filtrosSectionRef} className={`filtros-section${isSticky ? ' is-sticky' : ''}`}>
         <div className="filtros-container">
-          <div className="filtros">
-            {FILTROS.map((f) => (
-              <button
-                key={f.value}
-                className={`filtro-btn${filtro === f.value ? ' active' : ''}`}
-                onClick={() => setFiltro(f.value)}
-              >
-                {f.label}
-              </button>
-            ))}
-          </div>
+          <FiltrosFlotantes filtros={filtros} onChange={setFiltros} />
         </div>
       </section>
 
       {/* PROPIEDADES GRID SECTION */}
       <section className="propiedades-section">
         <div className="propiedades-container">
+          <h2 className="section-heading">Propiedades disponibles</h2>
           {loading ? (
             <div className="loading">Cargando propiedades…</div>
           ) : propiedades.length === 0 ? (
@@ -109,12 +235,17 @@ export default function Home() {
           ) : (
             <div className="grid">
               {propiedades.map((p) => (
-                <PropiedadCard key={p.id} {...p} />
+                <PropiedadCard key={p.id} {...p} onPreview={(id: string) => setModalId(id)} />
               ))}
             </div>
           )}
         </div>
       </section>
+
+      {/* Property quick-view modal */}
+      {modalId && (
+        <PropiedadModal propiedadId={modalId} onClose={() => setModalId(null)} />
+      )}
     </div>
   )
 }

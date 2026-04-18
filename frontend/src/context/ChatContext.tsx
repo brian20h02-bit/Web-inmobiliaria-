@@ -50,7 +50,7 @@ interface ChatContextType {
   abrirConversacion: (conversacionId: string) => Promise<void>
   cerrarConversacion: () => void
   enviarMensaje: (conversacionId: string, contenido: string) => Promise<void>
-  consultarPropiedad: (propiedadId: string, tituloProp: string) => Promise<void>
+  consultarPropiedad: (propiedadId: string, tituloProp: string, mensajePersonalizado?: string) => Promise<void>
   crearConversacionGeneral: () => Promise<void>
   cargarConversaciones: () => Promise<void>
   cargarNoLeidos: () => Promise<void>
@@ -149,10 +149,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [conversacionActual])
 
   // Consultar por una propiedad: crea conversación + mensaje inicial + abre chat
-  const consultarPropiedad = useCallback(async (propiedadId: string, tituloProp: string) => {
+  const consultarPropiedad = useCallback(async (propiedadId: string, tituloProp: string, mensajePersonalizado?: string) => {
     try {
       setIsLoading(true)
-      const mensajeInicial = `Hola, estoy interesado/a en la propiedad: ${tituloProp} (ID: ${propiedadId})`
+      const mensajeInicial = mensajePersonalizado || `Hola, estoy interesado/a en la propiedad: ${tituloProp} (ID: ${propiedadId})`
 
       const response = await api.post('/chat/conversaciones', {
         propiedadId,

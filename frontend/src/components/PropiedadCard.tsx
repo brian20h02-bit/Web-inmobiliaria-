@@ -13,6 +13,7 @@ interface PropiedadCardProps {
   ambientes?: number | null
   banos?: number | null
   imagenes: string[]
+  onPreview?: (id: string) => void
 }
 
 function formatPrecio(precio: number | string | undefined): string {
@@ -29,7 +30,7 @@ function formatExpensas(expensas: number | string | null | undefined): string {
   return '$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ARS'
 }
 
-export default function PropiedadCard({ id, titulo, descripcionPublica, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, imagenes }: PropiedadCardProps) {
+export default function PropiedadCard({ id, titulo, descripcionPublica, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, imagenes, onPreview }: PropiedadCardProps) {
   const [fav, setFav] = useState(false)
   const [imgIdx, setImgIdx] = useState(0)
   const badgeClass = tipo === 'VENTA' ? 'badge-venta' : tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'
@@ -56,8 +57,13 @@ export default function PropiedadCard({ id, titulo, descripcionPublica, tipo, pr
   const banosLabel = banos != null ? `${banos} ${banos === 1 ? 'baño' : 'baños'}` : null
   const m2Label = metrosCuadrados ? `${metrosCuadrados} m²` : null
 
+  const Wrapper = onPreview ? 'div' : Link
+  const wrapperProps = onPreview
+    ? { className: 'prop-card', onClick: () => onPreview(id), role: 'button' as const, tabIndex: 0, style: { cursor: 'pointer' } }
+    : { to: `/propiedades/${id}`, className: 'prop-card' }
+
   return (
-    <Link to={`/propiedades/${id}`} className="prop-card">
+    <Wrapper {...(wrapperProps as any)}>
       {/* ── Image section ── */}
       <div className="prop-card-image-wrap">
         {imagenes?.[imgIdx] ? (
@@ -132,6 +138,6 @@ export default function PropiedadCard({ id, titulo, descripcionPublica, tipo, pr
           <p className="prop-card-desc">{descripcionPublica}</p>
         )}
       </div>
-    </Link>
+    </Wrapper>
   )
 }
