@@ -4,25 +4,63 @@ import api from '../../lib/api'
 interface Propiedad {
   id: string
   titulo: string
+  descripcionPublica?: string
   tipo: string
   precio: number
+  expensas?: number | null
   ubicacion: string
+  metrosCuadrados?: number | null
+  ambientes?: number | null
+  banos?: number | null
+  contacto?: string
   activa: boolean
   destacada: boolean
   imagenes: string[]
+}
+
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const canvas = document.createElement('canvas')
+    const img = new Image()
+    img.onload = () => {
+      let width = img.width
+      let height = img.height
+      const maxWidth = 1920
+      const maxHeight = 1440
+      if (width > height) {
+        if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth }
+      } else {
+        if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight }
+      }
+      canvas.width = width
+      canvas.height = height
+      canvas.getContext('2d')?.drawImage(img, 0, 0, width, height)
+      resolve(canvas.toDataURL('image/jpeg', 0.7))
+    }
+    img.src = URL.createObjectURL(file)
+  })
 }
 
 export default function PropiedadesAdmin() {
   const [propiedades, setPropiedades] = useState<Propiedad[]>([])
   const [loading, setLoading] = useState(true)
   const [showPanel, setShowPanel] = useState(false)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [existingImages, setExistingImages] = useState<string[]>([])
+
+  // Form state
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [tipo, setTipo] = useState<'VENTA' | 'ALQUILER'>('VENTA')
-  const [descripcion, setDescripcion] = useState('')
   const [titulo, setTitulo] = useState('')
+  const [descripcion, setDescripcion] = useState('')
   const [precio, setPrecio] = useState('')
+  const [expensas, setExpensas] = useState('')
   const [ubicacion, setUbicacion] = useState('')
+  const [metrosCuadrados, setMetrosCuadrados] = useState('')
+  const [ambientesMode, setAmbientesMode] = useState<'mono' | 'multi'>('multi')
+  const [ambientes, setAmbientes] = useState('')
+  const [banos, setBanos] = useState('')
   const [contacto, setContacto] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
@@ -37,91 +75,103 @@ export default function PropiedadesAdmin() {
 
   useEffect(() => { loadPropiedades() }, [])
 
-  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0] ?? null
-    setImageFile(file)
-    if (file) {
-      setImagePreview(URL.createObjectURL(file))
-    } else {
-      setImagePreview(null)
-    }
+  function handleImagesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files
+    if (!files) return
+    const arr = Array.from(files)
+    setImageFiles(prev => [...prev, ...arr])
+    const previews = arr.map(f => URL.createObjectURL(f))
+    setImagePreviews(prev => [...prev, ...previews])
+  }
+
+  function removeImage(idx: number) {
+    setImageFiles(prev => prev.filter((_, i) => i !== idx))
+    setImagePreviews(prev => prev.filter((_, i) => i !== idx))
   }
 
   function resetForm() {
-    setImageFile(null)
-    setImagePreview(null)
-    setTipo('VENTA')
-    setDescripcion('')
-    setTitulo('')
-    setPrecio('')
-    setUbicacion('')
-    setContacto('')
-    setError('')
-    setSuccess('')
+    setEditingId(null); setExistingImages([])
+    setImageFiles([]); setImagePreviews([])
+    setTipo('VENTA'); setTitulo(''); setDescripcion('')
+    setPrecio(''); setExpensas(''); setUbicacion('')
+    setMetrosCuadrados(''); setAmbientesMode('multi')
+    setAmbientes(''); setBanos(''); setContacto('')
+    setError(''); setSuccess('')
+  }
+
+  function removeExistingImage(idx: number) {
+    setExistingImages(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  async function openEdit(p: Propiedad) {
+    resetForm()
+    setEditingId(p.id)
+    setShowPanel(true)
+    try {
+      const { data } = await api.get(`/propiedades/${p.id}`)
+      setTitulo(data.titulo || '')
+      setTipo(data.tipo as 'VENTA' | 'ALQUILER')
+      setPrecio(data.precio != null ? String(data.precio) : '')
+      setExpensas(data.expensas != null ? String(data.expensas) : '')
+      setUbicacion(data.ubicacion || '')
+      setMetrosCuadrados(data.metrosCuadrados != null ? String(data.metrosCuadrados) : '')
+      if (data.ambientes === 0) {
+        setAmbientesMode('mono'); setAmbientes('')
+      } else {
+        setAmbientesMode('multi'); setAmbientes(data.ambientes != null ? String(data.ambientes) : '')
+      }
+      setBanos(data.banos != null ? String(data.banos) : '')
+      setContacto(data.contacto || '')
+      setDescripcion(data.descripcionPublica || '')
+      setExistingImages(data.imagenes || [])
+    } catch {
+      setError('Error al cargar los datos de la propiedad.')
+    }
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError('')
-    setSuccess('')
+    setError(''); setSuccess('')
 
-    if (!titulo.trim()) { setError('El título es requerido.'); return }
+    if (!tipo) { setError('Selecciona el tipo de operación.'); return }
     if (!precio || isNaN(parseFloat(precio)) || parseFloat(precio) <= 0) { setError('El precio debe ser mayor a 0.'); return }
     if (!ubicacion.trim()) { setError('La ubicación es requerida.'); return }
+    if (!titulo.trim()) { setError('El título es requerido.'); return }
     if (!contacto.trim()) { setError('El contacto es requerido.'); return }
     if (!descripcion.trim()) { setError('La descripción es requerida.'); return }
 
     setSaving(true)
     try {
-      let imagenBase64: string | undefined
-      if (imageFile) {
-        // Comprimir imagen antes de convertir a base64
-        imagenBase64 = await new Promise<string>((resolve) => {
-          const canvas = document.createElement('canvas')
-          const img = new Image()
-          img.onload = () => {
-            // Limitar tamaño a 1920x1440
-            let width = img.width
-            let height = img.height
-            const maxWidth = 1920
-            const maxHeight = 1440
-
-            if (width > height) {
-              if (width > maxWidth) {
-                height = Math.round((height * maxWidth) / width)
-                width = maxWidth
-              }
-            } else {
-              if (height > maxHeight) {
-                width = Math.round((width * maxHeight) / height)
-                height = maxHeight
-              }
-            }
-
-            canvas.width = width
-            canvas.height = height
-            const ctx = canvas.getContext('2d')
-            ctx?.drawImage(img, 0, 0, width, height)
-
-            // Exportar como JPEG con calidad 0.7
-            resolve(canvas.toDataURL('image/jpeg', 0.7))
-          }
-          img.src = URL.createObjectURL(imageFile)
-        })
+      const imagenesBase64: string[] = []
+      for (const file of imageFiles) {
+        imagenesBase64.push(await compressImage(file))
       }
 
-      await api.post('/propiedades', {
+      const ambientesVal = ambientesMode === 'mono' ? 0 : (ambientes ? parseInt(ambientes) : undefined)
+
+      const body = {
         titulo,
         descripcionPublica: descripcion,
         descripcionPrivada: descripcion,
         tipo,
         precio: parseFloat(precio),
+        expensas: tipo === 'ALQUILER' && expensas ? parseFloat(expensas) : null,
         ubicacion,
+        metrosCuadrados: metrosCuadrados ? parseInt(metrosCuadrados) : null,
+        ambientes: ambientesVal ?? null,
+        banos: banos ? parseInt(banos) : null,
         contacto,
-        imagenBase64,
-      })
+        imagenesBase64,
+        imagenes: editingId ? existingImages : undefined,
+      }
 
-      setSuccess('¡Propiedad publicada correctamente!')
+      if (editingId) {
+        await api.put(`/propiedades/${editingId}`, body)
+        setSuccess('¡Propiedad actualizada correctamente!')
+      } else {
+        await api.post('/propiedades', body)
+        setSuccess('¡Propiedad publicada correctamente!')
+      }
       resetForm()
       setShowPanel(false)
       loadPropiedades()
@@ -146,24 +196,18 @@ export default function PropiedadesAdmin() {
 
   return (
     <div className="page-container">
-      {/* Header con botón + */}
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <h1 className="page-title" style={{ marginBottom: 0 }}>Propiedades</h1>
-        <button
-          onClick={() => { resetForm(); setShowPanel(true) }}
-          className="btn-add-propiedad"
-          title="Agregar propiedad"
-        >
-          +
-        </button>
+        <button onClick={() => { resetForm(); setShowPanel(true) }} className="btn-add-propiedad" title="Agregar propiedad">+</button>
       </div>
 
-      {/* Panel lateral para agregar propiedad */}
+      {/* Panel lateral */}
       {showPanel && (
         <div className="panel-overlay" onClick={() => setShowPanel(false)}>
           <div className="panel-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="panel-drawer-header">
-              <h2>Nueva propiedad</h2>
+              <h2>{editingId ? 'Editar propiedad' : 'Nueva propiedad'}</h2>
               <button onClick={() => setShowPanel(false)} className="panel-close">✕</button>
             </div>
 
@@ -171,91 +215,112 @@ export default function PropiedadesAdmin() {
             {success && <p className="success-msg">{success}</p>}
 
             <form onSubmit={handleSubmit} className="form">
-              {/* Imagen */}
+              {/* ── Imágenes (múltiples) ── */}
               <div className="form-group">
-                <label>Imagen de la propiedad</label>
-                <div
-                  className="image-upload-area"
-                  onClick={() => document.getElementById('img-input')?.click()}
-                >
-                  {imagePreview ? (
-                    <img src={imagePreview} alt="preview" className="image-preview" />
-                  ) : (
-                    <div className="image-upload-placeholder">
-                      <span style={{ fontSize: '2rem' }}>🖼️</span>
-                      <span>Hacé clic para subir una imagen</span>
-                    </div>
-                  )}
+                <label>Imágenes de la propiedad</label>
+                <div className="multi-image-upload" onClick={() => document.getElementById('img-input')?.click()}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                  <span>Hacé clic para agregar imágenes</span>
+                  <span style={{ fontSize: '0.72rem', color: '#999' }}>Sin límite de cantidad</span>
                 </div>
-                <input
-                  id="img-input"
-                  type="file"
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  onChange={handleImageChange}
-                />
+                <input id="img-input" type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleImagesChange} />
+                {/* Existing images (edit mode) */}
+                {existingImages.length > 0 && (
+                  <div className="image-preview-grid">
+                    {existingImages.map((src, i) => (
+                      <div key={`existing-${i}`} className="image-preview-item">
+                        <img src={src} alt={`imagen ${i + 1}`} />
+                        <button type="button" className="image-preview-remove" onClick={() => removeExistingImage(i)}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* New images to upload */}
+                {imagePreviews.length > 0 && (
+                  <div className="image-preview-grid">
+                    {imagePreviews.map((src, i) => (
+                      <div key={`new-${i}`} className="image-preview-item image-preview-new">
+                        <img src={src} alt={`preview ${i + 1}`} />
+                        <button type="button" className="image-preview-remove" onClick={() => removeImage(i)}>✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Tipo */}
+              {/* ── Tipo de operación ── */}
               <div className="form-group">
-                <label>Tipo de operación</label>
+                <label>Tipo de operación *</label>
                 <div className="tipo-selector">
-                  <button
-                    type="button"
-                    className={`tipo-btn${tipo === 'VENTA' ? ' active' : ''}`}
-                    onClick={() => setTipo('VENTA')}
-                  >
-                    Venta
-                  </button>
-                  <button
-                    type="button"
-                    className={`tipo-btn${tipo === 'ALQUILER' ? ' active' : ''}`}
-                    onClick={() => setTipo('ALQUILER')}
-                  >
-                    Alquiler
-                  </button>
+                  <button type="button" className={`tipo-btn${tipo === 'VENTA' ? ' active' : ''}`} onClick={() => setTipo('VENTA')}>Venta</button>
+                  <button type="button" className={`tipo-btn${tipo === 'ALQUILER' ? ' active' : ''}`} onClick={() => setTipo('ALQUILER')}>Alquiler</button>
                 </div>
               </div>
 
-              {/* Título */}
+              {/* ── Título ── */}
               <div className="form-group">
                 <label>Título *</label>
-                <input className="form-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Casa en el centro" required />
+                <input className="form-input" value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Departamento 3 ambientes en Palermo" required />
               </div>
 
-              {/* Precio y Ubicación */}
+              {/* ── Precio + Expensas ── */}
               <div className="form-row">
                 <div className="form-group">
-                  <label>Precio *</label>
-                  <input className="form-input" type="number" min="1" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder="Ej: 150000" required />
+                  <label>{tipo === 'ALQUILER' ? 'Precio mensual (USD) *' : 'Precio total (USD) *'}</label>
+                  <input className="form-input" type="number" min="1" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder={tipo === 'ALQUILER' ? 'Ej: 800' : 'Ej: 150000'} required />
+                </div>
+                {tipo === 'ALQUILER' && (
+                  <div className="form-group">
+                    <label>Expensas (ARS)</label>
+                    <input className="form-input" type="number" min="0" value={expensas} onChange={(e) => setExpensas(e.target.value)} placeholder="Ej: 35000" />
+                  </div>
+                )}
+              </div>
+
+              {/* ── Ubicación ── */}
+              <div className="form-group">
+                <label>Dirección completa *</label>
+                <input className="form-input" value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} placeholder="Ej: Av. Corrientes 1234, Palermo, Buenos Aires" required />
+              </div>
+
+              {/* ── Metros + Baños ── */}
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Metros cuadrados</label>
+                  <input className="form-input" type="number" min="1" value={metrosCuadrados} onChange={(e) => setMetrosCuadrados(e.target.value)} placeholder="Ej: 85" />
                 </div>
                 <div className="form-group">
-                  <label>Ubicación *</label>
-                  <input className="form-input" value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} placeholder="Ej: Av. Corrientes 1234" required />
+                  <label>Baños</label>
+                  <input className="form-input" type="number" min="0" value={banos} onChange={(e) => setBanos(e.target.value)} placeholder="Ej: 2" />
                 </div>
               </div>
 
-              {/* Contacto */}
+              {/* ── Ambientes ── */}
+              <div className="form-group">
+                <label>Ambientes</label>
+                <div className="tipo-selector" style={{ marginBottom: ambientesMode === 'multi' ? 8 : 0 }}>
+                  <button type="button" className={`tipo-btn${ambientesMode === 'mono' ? ' active' : ''}`} onClick={() => { setAmbientesMode('mono'); setAmbientes('') }}>Monoambiente</button>
+                  <button type="button" className={`tipo-btn${ambientesMode === 'multi' ? ' active' : ''}`} onClick={() => setAmbientesMode('multi')}>Más ambientes</button>
+                </div>
+                {ambientesMode === 'multi' && (
+                  <input className="form-input" type="number" min="1" value={ambientes} onChange={(e) => setAmbientes(e.target.value)} placeholder="Ej: 3" />
+                )}
+              </div>
+
+              {/* ── Contacto ── */}
               <div className="form-group">
                 <label>Contacto *</label>
                 <input className="form-input" value={contacto} onChange={(e) => setContacto(e.target.value)} placeholder="Ej: +54 11 1234-5678" required />
               </div>
 
-              {/* Descripción */}
+              {/* ── Descripción ── */}
               <div className="form-group">
                 <label>Descripción *</label>
-                <textarea
-                  className="form-input"
-                  rows={5}
-                  value={descripcion}
-                  onChange={(e) => setDescripcion(e.target.value)}
-                  placeholder="Describí la propiedad: ambientes, características, estado..."
-                  required
-                />
+                <textarea className="form-input" rows={5} value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Describí la propiedad: ambientes, características, estado..." required />
               </div>
 
               <button type="submit" disabled={saving} className="btn btn-primary btn-full">
-                {saving ? 'Publicando…' : 'Publicar propiedad'}
+                {saving ? (editingId ? 'Guardando…' : 'Publicando…') : (editingId ? 'Guardar cambios' : 'Publicar propiedad')}
               </button>
             </form>
           </div>
@@ -268,9 +333,7 @@ export default function PropiedadesAdmin() {
       ) : propiedades.length === 0 ? (
         <div className="empty">
           <p>No hay propiedades aún.</p>
-          <button onClick={() => { resetForm(); setShowPanel(true) }} className="btn btn-primary" style={{ marginTop: 12 }}>
-            + Agregar la primera propiedad
-          </button>
+          <button onClick={() => { resetForm(); setShowPanel(true) }} className="btn btn-primary" style={{ marginTop: 12 }}>+ Agregar la primera propiedad</button>
         </div>
       ) : (
         <table className="admin-table">
@@ -297,6 +360,7 @@ export default function PropiedadesAdmin() {
                 <td>${p.precio?.toLocaleString()}</td>
                 <td>{p.destacada ? '⭐' : '—'}</td>
                 <td className="table-actions">
+                  <button onClick={() => openEdit(p)} className="btn btn-outline btn-sm">Editar</button>
                   {!p.destacada && (
                     <button onClick={() => handleDestacar(p.id)} className="btn btn-outline btn-sm">Destacar</button>
                   )}

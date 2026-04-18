@@ -18,6 +18,12 @@ interface Propiedad {
   titulo: string
   descripcionPublica: string
   tipo: string
+  precio?: number | string
+  expensas?: number | string | null
+  ubicacion?: string
+  metrosCuadrados?: number | null
+  ambientes?: number | null
+  banos?: number | null
   imagenes: string[]
   destacada: boolean
 }
@@ -65,6 +71,17 @@ export default function Home() {
         onLogout={handleLogout}
       />
 
+      {/* CARRUSEL SECTION */}
+      <section className="carrusel-section">
+        <div className="carrusel-container">
+          {destacadas.length > 0 ? (
+            <Carrusel propiedades={destacadas} />
+          ) : (
+            <div className="carrusel-empty">No hay propiedades destacadas en este momento.</div>
+          )}
+        </div>
+      </section>
+
       {/* FILTROS SECTION */}
       <section className="filtros-section">
         <div className="filtros-container">
@@ -79,17 +96,6 @@ export default function Home() {
               </button>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* CARRUSEL SECTION */}
-      <section className="carrusel-section">
-        <div className="carrusel-container">
-          {destacadas.length > 0 ? (
-            <Carrusel propiedades={destacadas} />
-          ) : (
-            <div className="carrusel-empty">No hay propiedades destacadas en este momento.</div>
-          )}
         </div>
       </section>
 

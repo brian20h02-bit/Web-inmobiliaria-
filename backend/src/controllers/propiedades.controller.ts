@@ -13,9 +13,14 @@ const crearPropiedadSchema = z.object({
   descripcionPrivada: z.string().optional(),
   tipo: z.enum(['VENTA', 'ALQUILER', 'OTRO']),
   precio: z.number().positive('El precio debe ser positivo'),
+  expensas: z.number().nonnegative().optional().nullable(),
   ubicacion: z.string().min(1, 'La ubicación es requerida'),
+  metrosCuadrados: z.number().int().positive().optional().nullable(),
+  ambientes: z.number().int().nonnegative().optional().nullable(),
+  banos: z.number().int().nonnegative().optional().nullable(),
   contacto: z.string().min(1, 'El contacto es requerido'),
   imagenBase64: z.string().optional(),
+  imagenesBase64: z.array(z.string()).optional(),
   imagenes: z.array(z.string()).default([]),
 });
 
@@ -35,9 +40,15 @@ export async function listarDestacadas(_req: Request, res: Response): Promise<vo
         titulo: true,
         descripcionPublica: true,
         tipo: true,
+        precio: true,
+        expensas: true,
+        ubicacion: true,
+        metrosCuadrados: true,
+        ambientes: true,
+        banos: true,
         imagenes: true,
         fechaPublicacion: true,
-        activa: true, // Added 'activa' field
+        activa: true,
       },
       orderBy: {
         fechaPublicacion: 'desc',
@@ -68,9 +79,16 @@ export async function listar(req: Request, res: Response): Promise<void> {
         titulo: true,
         descripcionPublica: true,
         tipo: true,
+        precio: true,
+        expensas: true,
+        ubicacion: true,
+        metrosCuadrados: true,
+        ambientes: true,
+        banos: true,
         imagenes: true,
         fechaPublicacion: true,
-        activa: true, // Added 'activa' field
+        activa: true,
+        destacada: true,
       },
       orderBy: {
         fechaPublicacion: 'desc',
@@ -99,21 +117,31 @@ export async function obtenerDetalle(req: Request, res: Response): Promise<void>
             descripcionPublica: true,
             descripcionPrivada: req.user.rol === 'ADMINISTRADOR',
             tipo: true,
-            precio: req.user.rol === 'ADMINISTRADOR',
-            ubicacion: req.user.rol === 'ADMINISTRADOR',
+            precio: true,
+            expensas: true,
+            ubicacion: true,
+            metrosCuadrados: true,
+            ambientes: true,
+            banos: true,
             contacto: req.user.rol === 'ADMINISTRADOR',
             imagenes: true,
             fechaPublicacion: true,
-            activa: true, // Added 'activa' field
+            activa: true,
           }
         : {
             id: true,
             titulo: true,
             descripcionPublica: true,
             tipo: true,
+            precio: true,
+            expensas: true,
+            ubicacion: true,
+            metrosCuadrados: true,
+            ambientes: true,
+            banos: true,
             imagenes: true,
             fechaPublicacion: true,
-            activa: true, // Added 'activa' field
+            activa: true,
           },
     });
 
@@ -137,7 +165,7 @@ export async function crear(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, ubicacion, contacto, imagenBase64, imagenes } = parsed.data;
+    const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, contacto, imagenBase64, imagenesBase64, imagenes } = parsed.data;
     const administradorId = req.user!.id;
 
     console.log('📝 Crear propiedad - Usuario:', {
@@ -164,24 +192,29 @@ export async function crear(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    // Procesar imagen base64 con Cloudinary si existe
+    // Procesar imágenes base64 con Cloudinary
     let imagenesFinales: string[] = imagenes || [];
-    if (imagenBase64) {
+    const allBase64 = [
+      ...(imagenBase64 ? [imagenBase64] : []),
+      ...(imagenesBase64 || []),
+    ];
+    if (allBase64.length > 0) {
       try {
-        // Validar que Cloudinary esté configurado
         if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
           res.status(400).json({ error: 'Cloudinary no está configurado. Contacta al administrador.' });
           return;
         }
 
-        console.log('Subiendo imagen a Cloudinary para:', titulo);
-        const uploadResult = await cloudinary.uploader.upload(imagenBase64, {
-          folder: 'inmobiliaria/propiedades',
-          resource_type: 'auto',
-          quality: 'auto',
-        });
-        imagenesFinales.push(uploadResult.secure_url);
-        console.log('Imagen subida exitosamente:', uploadResult.secure_url);
+        console.log(`Subiendo ${allBase64.length} imagen(es) a Cloudinary para:`, titulo);
+        for (const b64 of allBase64) {
+          const uploadResult = await cloudinary.uploader.upload(b64, {
+            folder: 'inmobiliaria/propiedades',
+            resource_type: 'auto',
+            quality: 'auto',
+          });
+          imagenesFinales.push(uploadResult.secure_url);
+          console.log('Imagen subida exitosamente:', uploadResult.secure_url);
+        }
       } catch (uploadError: any) {
         console.error('Error al subir imagen a Cloudinary:', uploadError);
         const errorMessage = uploadError?.message || 'Error desconocido en Cloudinary';
@@ -197,7 +230,11 @@ export async function crear(req: Request, res: Response): Promise<void> {
         descripcionPrivada,
         tipo,
         precio: new Decimal(precio),
+        expensas: expensas != null ? new Decimal(expensas) : null,
         ubicacion,
+        metrosCuadrados: metrosCuadrados ?? null,
+        ambientes: ambientes ?? null,
+        banos: banos ?? null,
         contacto,
         imagenes: imagenesFinales,
         administradorId,
@@ -245,9 +282,45 @@ export async function actualizar(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    const { imagenesBase64, imagenBase64, precio, expensas, ...rest } = parsed.data;
+
+    // Process new base64 images if any
+    let imagenesFinales: string[] | undefined = rest.imagenes;
+    const allBase64 = [
+      ...(imagenBase64 ? [imagenBase64] : []),
+      ...(imagenesBase64 || []),
+    ];
+    if (allBase64.length > 0) {
+      try {
+        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+          res.status(400).json({ error: 'Cloudinary no está configurado.' });
+          return;
+        }
+        const existing = imagenesFinales || [];
+        for (const b64 of allBase64) {
+          const uploadResult = await cloudinary.uploader.upload(b64, {
+            folder: 'inmobiliaria/propiedades',
+            resource_type: 'auto',
+            quality: 'auto',
+          });
+          existing.push(uploadResult.secure_url);
+        }
+        imagenesFinales = existing;
+      } catch (uploadError: any) {
+        console.error('Error al subir imagen a Cloudinary:', uploadError);
+        res.status(400).json({ error: `Error al procesar la imagen: ${uploadError?.message || 'Error desconocido'}` });
+        return;
+      }
+    }
+
+    const updateData: Record<string, unknown> = { ...rest };
+    if (imagenesFinales !== undefined) updateData.imagenes = imagenesFinales;
+    if (precio !== undefined) updateData.precio = new Decimal(precio);
+    if (expensas !== undefined) updateData.expensas = expensas !== null ? new Decimal(expensas) : null;
+
     const propiedad = await prisma.propiedad.update({
       where: { id },
-      data: parsed.data,
+      data: updateData,
       include: {
         administrador: {
           select: {

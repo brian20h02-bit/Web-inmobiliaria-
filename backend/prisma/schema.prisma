@@ -31,7 +31,11 @@ model Propiedad {
   descripcionPrivada String?
   tipo               TipoPropiedad
   precio             Decimal
+  expensas           Decimal?
   ubicacion          String
+  metrosCuadrados    Int?
+  ambientes          Int?
+  banos              Int?
   contacto           String
   imagenes           String[]
   destacada          Boolean       @default(false)
