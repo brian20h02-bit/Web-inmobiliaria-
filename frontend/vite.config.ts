@@ -5,10 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/auth': 'http://localhost:3001',
-      '/propiedades': 'http://localhost:3001',
-      '/consultas': 'http://localhost:3001',
-      '/admin': 'http://localhost:3001',
+      '/api': 'http://localhost:3001',
     },
   },
 })

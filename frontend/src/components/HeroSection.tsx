@@ -1,14 +1,16 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
+import UserMenu from './UserMenu'
 
 interface User {
   email: string
+  nombre?: string
   rol?: string
 }
 
 interface HeroSectionProps {
   onComprarClick?: () => void
   onAlquilarClick?: () => void
+  onDescubreClick?: () => void
   heroImage?: string
   logoUrl?: string
   title?: string
@@ -20,6 +22,7 @@ interface HeroSectionProps {
 export default function HeroSection({
   onComprarClick,
   onAlquilarClick,
+  onDescubreClick,
   heroImage = 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?w=1200&h=900&fit=crop',
   logoUrl,
   title = "Encontrá el hogar que siempre soñaste",
@@ -27,21 +30,16 @@ export default function HeroSection({
   user,
   onLogout,
 }: HeroSectionProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
   const esAdmin = user?.rol === 'ADMINISTRADOR'
 
   return (
     <section 
       className="hero-section" 
-      style={{
-        backgroundImage: `url(${heroImage})`,
-      }}
+      style={{ backgroundImage: `url(${heroImage})` }}
       role="banner"
     >
-      {/* Overlay oscuro para mejorar legibilidad */}
       <div className="hero-overlay" aria-hidden="true" />
 
-      {/* LOGO - ARRIBA A LA IZQUIERDA (DISCRETO) */}
       {logoUrl && (
         <div className="hero-logo-minimal-wrapper">
           <img 
@@ -53,96 +51,42 @@ export default function HeroSection({
         </div>
       )}
 
-      {/* BLOQUE DE USUARIO CON LÓGICA CONDICIONAL */}
+      {/* Menú de usuario / auth — top right */}
       <div className="hero-user-section">
-        {/* CASO 1: No hay usuario logueado */}
         {!user && (
           <div className="hero-user-info">
-            <Link to="/login" className="btn-hero-outline">
-              Iniciar sesión
-            </Link>
-            <Link to="/registro" className="btn-hero-outline">
-              Registrarse
-            </Link>
+            <Link to="/login" className="btn-hero-outline">Iniciar sesión</Link>
+            <Link to="/registro" className="btn-hero-outline">Registrarse</Link>
           </div>
         )}
-
-        {/* CASO 2: Usuario logueado (no admin) */}
-        {user && !esAdmin && (
-          <div className="hero-user-info">
-            <span className="hero-user-email">{user.email}</span>
-            <button onClick={onLogout} className="btn-hero-outline">
-              Cerrar sesión
-            </button>
-          </div>
-        )}
-
-        {/* CASO 3: Usuario ADMIN */}
-        {esAdmin && (
-          <>
-            <div className="hero-user-info">
-              <span className="hero-user-email">{user.email}</span>
-              <button onClick={onLogout} className="btn-hero-outline">
-                Cerrar sesión
-              </button>
-            </div>
-            <div className="hero-admin-menu">
-              <button
-                className="btn-hero-outline btn-admin-toggle"
-                onClick={() => setMenuOpen(!menuOpen)}
-              >
-                Panel Admin ▾
-              </button>
-              {menuOpen && (
-                <div className="hero-admin-dropdown" onClick={() => setMenuOpen(false)}>
-                  <Link to="/admin" className="hero-admin-link">Dashboard</Link>
-                  <Link to="/admin/propiedades" className="hero-admin-link">Propiedades</Link>
-                  <Link to="/admin/consultas" className="hero-admin-link">Consultas</Link>
-                  <Link to="/admin/usuarios" className="hero-admin-link">Usuarios</Link>
-                </div>
-              )}
-            </div>
-          </>
+        {user && (
+          <UserMenu
+            email={user.email}
+            onLogout={onLogout ?? (() => {})}
+            isAdmin={esAdmin}
+          />
         )}
       </div>
 
-      {/* Contenedor de contenido */}
       <div className="hero-content">
-        {/* Título principal */}
-        <h1 className="hero-title">
-          {title}
-        </h1>
+        <h1 className="hero-title">{title}</h1>
+        <p className="hero-subtitle">{subtitle}</p>
 
-        {/* Subtítulo */}
-        <p className="hero-subtitle">
-          {subtitle}
-        </p>
-
-        {/* Botones principales */}
         <div className="hero-buttons-wrapper">
           <div className="hero-buttons">
-            <button
-              className="btn-hero btn-hero-primary"
-              onClick={onComprarClick}
-              aria-label="Buscar propiedades en venta"
-            >
+            <button className="btn-hero btn-hero-primary" onClick={onComprarClick} aria-label="Buscar propiedades en venta">
               Comprar
             </button>
-            <button
-              className="btn-hero btn-hero-secondary"
-              onClick={onAlquilarClick}
-              aria-label="Buscar propiedades en alquiler"
-            >
+            <button className="btn-hero btn-hero-secondary" onClick={onAlquilarClick} aria-label="Buscar propiedades en alquiler">
               Alquilar
             </button>
           </div>
         </div>
 
-        {/* Indicador de scroll - DENTRO del hero-content para alineación unificada */}
-        <div className="hero-scroll-indicator" aria-hidden="true">
+        <button className="hero-scroll-indicator" onClick={onDescubreClick} aria-label="Descubre propiedades">
           <span className="scroll-text">Descubre propiedades</span>
           <div className="scroll-arrow">↓</div>
-        </div>
+        </button>
       </div>
     </section>
   )

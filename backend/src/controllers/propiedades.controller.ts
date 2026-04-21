@@ -19,6 +19,9 @@ const crearPropiedadSchema = z.object({
   ambientes: z.number().int().nonnegative().optional().nullable(),
   banos: z.number().int().nonnegative().optional().nullable(),
   contacto: z.string().min(1, 'El contacto es requerido'),
+  lat: z.number().optional().nullable(),
+  lng: z.number().optional().nullable(),
+  houseTourUrl: z.string().optional().nullable(),
   imagenBase64: z.string().optional(),
   imagenesBase64: z.array(z.string()).optional(),
   imagenes: z.array(z.string()).default([]),
@@ -125,6 +128,9 @@ export async function obtenerDetalle(req: Request, res: Response): Promise<void>
             banos: true,
             contacto: req.user.rol === 'ADMINISTRADOR',
             imagenes: true,
+            houseTourUrl: true,
+            lat: true,
+            lng: true,
             fechaPublicacion: true,
             activa: true,
           }
@@ -140,6 +146,9 @@ export async function obtenerDetalle(req: Request, res: Response): Promise<void>
             ambientes: true,
             banos: true,
             imagenes: true,
+            houseTourUrl: true,
+            lat: true,
+            lng: true,
             fechaPublicacion: true,
             activa: true,
           },
@@ -165,7 +174,7 @@ export async function crear(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, contacto, imagenBase64, imagenesBase64, imagenes } = parsed.data;
+    const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, contacto, lat, lng, houseTourUrl, imagenBase64, imagenesBase64, imagenes } = parsed.data;
     const administradorId = req.user!.id;
 
     console.log('📝 Crear propiedad - Usuario:', {
@@ -237,6 +246,9 @@ export async function crear(req: Request, res: Response): Promise<void> {
         banos: banos ?? null,
         contacto,
         imagenes: imagenesFinales,
+        houseTourUrl: houseTourUrl ?? null,
+        lat: lat ?? null,
+        lng: lng ?? null,
         administradorId,
       },
       include: {
@@ -282,7 +294,7 @@ export async function actualizar(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const { imagenesBase64, imagenBase64, precio, expensas, ...rest } = parsed.data;
+    const { imagenesBase64, imagenBase64, precio, expensas, houseTourUrl: houseTourUrlUpd, ...rest } = parsed.data;
 
     // Process new base64 images if any
     let imagenesFinales: string[] | undefined = rest.imagenes;
@@ -317,6 +329,7 @@ export async function actualizar(req: Request, res: Response): Promise<void> {
     if (imagenesFinales !== undefined) updateData.imagenes = imagenesFinales;
     if (precio !== undefined) updateData.precio = new Decimal(precio);
     if (expensas !== undefined) updateData.expensas = expensas !== null ? new Decimal(expensas) : null;
+    if (houseTourUrlUpd !== undefined) updateData.houseTourUrl = houseTourUrlUpd ?? null;
 
     const propiedad = await prisma.propiedad.update({
       where: { id },

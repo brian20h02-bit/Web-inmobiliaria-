@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
+import { usePropiedadModal } from '../context/PropiedadModalContext'
 import api from '../lib/api'
 
 interface PropiedadDetalle {
@@ -19,11 +20,6 @@ interface PropiedadDetalle {
   imagenes: string[]
 }
 
-interface Props {
-  propiedadId: string
-  onClose: () => void
-}
-
 function formatPrecio(precio: number | string | undefined): string {
   if (!precio) return ''
   const num = typeof precio === 'string' ? parseFloat(precio) : precio
@@ -38,7 +34,10 @@ function formatExpensas(expensas: number | string | null | undefined): string {
   return '$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ARS'
 }
 
-export default function PropiedadModal({ propiedadId, onClose }: Props) {
+export default function PropiedadModal() {
+  const { selectedId: propiedadId, closeModal } = usePropiedadModal()
+
+  // ── ALL hooks must be called unconditionally (Rules of Hooks) ──
   const [prop, setProp] = useState<PropiedadDetalle | null>(null)
   const [loading, setLoading] = useState(true)
   const [imgIdx, setImgIdx] = useState(0)
@@ -52,42 +51,48 @@ export default function PropiedadModal({ propiedadId, onClose }: Props) {
   // Animated close helper
   const animatedClose = useCallback(() => {
     setClosing(true)
-    setTimeout(onClose, 280)
-  }, [onClose])
+    setTimeout(closeModal, 280)
+  }, [closeModal])
 
-  // Fetch property detail
+  // Fetch property detail — only when modal is open
   useEffect(() => {
+    if (!propiedadId) return
     setLoading(true)
     setImgIdx(0)
+    setConsultaEnviada(false)
+    setClosing(false)
     api.get(`/propiedades/${propiedadId}`)
       .then((r) => setProp(r.data))
       .catch(() => setProp(null))
       .finally(() => setLoading(false))
   }, [propiedadId])
 
-  // Lock body scroll — store original value & restore
+  // Lock body scroll — tied to propiedadId so cleanup always fires on close
   useEffect(() => {
+    if (!propiedadId) return
     const original = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = original }
-  }, [])
+  }, [propiedadId])
 
   // ESC to close
   useEffect(() => {
+    if (!propiedadId) return
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') animatedClose()
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [animatedClose])
+  }, [propiedadId, animatedClose])
 
   // Focus trap
   useEffect(() => {
+    if (!propiedadId || loading) return
     const el = modalRef.current
     if (!el) return
     const focusable = el.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
     if (focusable.length) focusable[0].focus()
-  }, [loading])
+  }, [propiedadId, loading])
 
   // Preload adjacent images
   useEffect(() => {
@@ -116,13 +121,14 @@ export default function PropiedadModal({ propiedadId, onClose }: Props) {
 
   // Keyboard arrow navigation for images
   useEffect(() => {
+    if (!propiedadId) return
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'ArrowLeft') prevImg()
       if (e.key === 'ArrowRight') nextImg()
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [prevImg, nextImg])
+  }, [propiedadId, prevImg, nextImg])
 
   async function handleConsultar() {
     if (!prop) return
@@ -131,6 +137,9 @@ export default function PropiedadModal({ propiedadId, onClose }: Props) {
     const mensaje = `Hola, estoy interesado/a en la propiedad '${prop.titulo}'${prop.ubicacion ? ` en ${prop.ubicacion}` : ''}${precioStr ? ` por ${precioStr}` : ''} (${tipoLabel}). ¿Podrían brindarme más información?`
     await consultarPropiedad(prop.id, prop.titulo, mensaje)
   }
+
+  // ── Early return AFTER all hooks — this is the correct pattern ──
+  if (!propiedadId) return null
 
   const badgeClass = prop?.tipo === 'VENTA' ? 'badge-venta' : prop?.tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'
   const badgeLabel = prop?.tipo === 'VENTA' ? 'Venta' : prop?.tipo === 'ALQUILER' ? 'Alquiler' : prop?.tipo

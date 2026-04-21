@@ -4,8 +4,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import authRouter from './routes/auth';
 import propiedadesRouter from './routes/propiedades';
+import consultasRouter from './routes/consultas';
 import adminRouter from './routes/admin';
 import chatRouter from './routes/chat';
+import usuarioRouter from './routes/usuario';
 
 const app = express();
 
@@ -54,12 +56,14 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
-app.use('/auth', authRouter);
-app.use('/propiedades', propiedadesRouter);
-app.use('/admin', adminRouter);
-app.use('/chat', chatRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/propiedades', propiedadesRouter);
+app.use('/api/consultas', consultasRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/chat', chatRouter);
+app.use('/api/usuario', usuarioRouter);
 
-app.get('/health', (_req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 

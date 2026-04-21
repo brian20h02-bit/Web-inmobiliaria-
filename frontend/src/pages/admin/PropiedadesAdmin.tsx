@@ -16,6 +16,7 @@ interface Propiedad {
   activa: boolean
   destacada: boolean
   imagenes: string[]
+  houseTourUrl?: string | null
 }
 
 function compressImage(file: File): Promise<string> {
@@ -62,6 +63,11 @@ export default function PropiedadesAdmin() {
   const [ambientes, setAmbientes] = useState('')
   const [banos, setBanos] = useState('')
   const [contacto, setContacto] = useState('')
+  const [lat, setLat] = useState('')
+  const [lng, setLng] = useState('')
+  const [houseTourUrl, setHouseTourUrl] = useState('')
+  const [geocoding, setGeocoding] = useState(false)
+  const [geocodeError, setGeocodeError] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [saving, setSaving] = useState(false)
@@ -96,7 +102,28 @@ export default function PropiedadesAdmin() {
     setPrecio(''); setExpensas(''); setUbicacion('')
     setMetrosCuadrados(''); setAmbientesMode('multi')
     setAmbientes(''); setBanos(''); setContacto('')
-    setError(''); setSuccess('')
+    setLat(''); setLng(''); setHouseTourUrl('')
+    setError(''); setSuccess(''); setGeocodeError('')
+  }
+
+  async function geocodeUbicacion() {
+    if (!ubicacion.trim()) { setGeocodeError('Ingresá una dirección primero.'); return }
+    setGeocoding(true)
+    setGeocodeError('')
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(ubicacion)}&format=json&limit=1`,
+        { headers: { 'Accept-Language': 'es' } }
+      )
+      const data = await res.json()
+      if (data.length === 0) { setGeocodeError('No se encontró la dirección. Probá con más detalle.'); return }
+      setLat(parseFloat(data[0].lat).toFixed(6))
+      setLng(parseFloat(data[0].lon).toFixed(6))
+    } catch {
+      setGeocodeError('Error al conectar con el servicio de mapas.')
+    } finally {
+      setGeocoding(false)
+    }
   }
 
   function removeExistingImage(idx: number) {
@@ -122,6 +149,9 @@ export default function PropiedadesAdmin() {
       }
       setBanos(data.banos != null ? String(data.banos) : '')
       setContacto(data.contacto || '')
+      setLat(data.lat != null ? String(data.lat) : '')
+      setLng(data.lng != null ? String(data.lng) : '')
+      setHouseTourUrl(data.houseTourUrl || '')
       setDescripcion(data.descripcionPublica || '')
       setExistingImages(data.imagenes || [])
     } catch {
@@ -161,6 +191,9 @@ export default function PropiedadesAdmin() {
         ambientes: ambientesVal ?? null,
         banos: banos ? parseInt(banos) : null,
         contacto,
+        lat: lat ? parseFloat(lat) : null,
+        lng: lng ? parseFloat(lng) : null,
+        houseTourUrl: houseTourUrl.trim() || null,
         imagenesBase64,
         imagenes: editingId ? existingImages : undefined,
       }
@@ -189,9 +222,15 @@ export default function PropiedadesAdmin() {
     loadPropiedades()
   }
 
-  async function handleDestacar(id: string) {
-    await api.patch(`/propiedades/${id}/destacar`).catch(() => null)
-    loadPropiedades()
+  async function toggleDestacada(id: string, currentState: boolean) {
+    // Optimistic update
+    setPropiedades(prev => prev.map(p => p.id === id ? { ...p, destacada: !currentState } : p))
+    try {
+      await api.patch(`/propiedades/${id}/destacar`)
+    } catch {
+      // Revert on error
+      setPropiedades(prev => prev.map(p => p.id === id ? { ...p, destacada: currentState } : p))
+    }
   }
 
   return (
@@ -313,6 +352,59 @@ export default function PropiedadesAdmin() {
                 <input className="form-input" value={contacto} onChange={(e) => setContacto(e.target.value)} placeholder="Ej: +54 11 1234-5678" required />
               </div>
 
+              {/* ── Coordenadas GPS (mapa) ── */}
+              <div className="form-group">
+                <label>Coordenadas para el mapa (opcional)</label>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <button
+                    type="button"
+                    onClick={geocodeUbicacion}
+                    disabled={geocoding}
+                    className="btn btn-outline btn-sm"
+                    style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                  >
+                    {geocoding ? 'Buscando…' : '📍 Obtener coordenadas'}
+                  </button>
+                  {lat && lng && (
+                    <a
+                      href={`https://maps.google.com/maps?q=${lat},${lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline btn-sm"
+                      style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+                    >
+                      🗺 Ver en mapa
+                    </a>
+                  )}
+                </div>
+                {geocodeError && <p className="error-msg" style={{ margin: '4px 0 8px' }}>{geocodeError}</p>}
+                <div className="form-row" style={{ marginBottom: 0 }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <input className="form-input" type="number" step="any" value={lat} onChange={(e) => setLat(e.target.value)} placeholder="Latitud (Ej: -34.6037)" />
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <input className="form-input" type="number" step="any" value={lng} onChange={(e) => setLng(e.target.value)} placeholder="Longitud (Ej: -58.3816)" />
+                  </div>
+                </div>
+              </div>
+
+              {/* ── House Tour (video) ── */}
+              <div className="form-group">
+                <label>House Tour (video URL)</label>
+                <input
+                  className="form-input"
+                  type="url"
+                  value={houseTourUrl}
+                  onChange={(e) => setHouseTourUrl(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=... o https://example.com/video.mp4"
+                />
+                {houseTourUrl && (
+                  <p style={{ fontSize: '0.75rem', color: '#666', marginTop: 4 }}>
+                    Vista previa disponible al guardar
+                  </p>
+                )}
+              </div>
+
               {/* ── Descripción ── */}
               <div className="form-group">
                 <label>Descripción *</label>
@@ -358,12 +450,20 @@ export default function PropiedadesAdmin() {
                 <td>{p.titulo}</td>
                 <td><span className="badge">{p.tipo}</span></td>
                 <td>${p.precio?.toLocaleString()}</td>
-                <td>{p.destacada ? '⭐' : '—'}</td>
+                <td>
+                  <button
+                    className={`star-toggle${p.destacada ? ' star-toggle--active' : ''}`}
+                    onClick={() => toggleDestacada(p.id, p.destacada)}
+                    title={p.destacada ? 'Quitar de destacadas' : 'Marcar como destacada'}
+                    aria-label={p.destacada ? 'Quitar destacada' : 'Destacar propiedad'}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill={p.destacada ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                    </svg>
+                  </button>
+                </td>
                 <td className="table-actions">
                   <button onClick={() => openEdit(p)} className="btn btn-outline btn-sm">Editar</button>
-                  {!p.destacada && (
-                    <button onClick={() => handleDestacar(p.id)} className="btn btn-outline btn-sm">Destacar</button>
-                  )}
                   <button onClick={() => handleDelete(p.id)} className="btn btn-danger btn-sm">Eliminar</button>
                 </td>
               </tr>

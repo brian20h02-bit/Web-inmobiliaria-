@@ -16,6 +16,8 @@ model Usuario {
   rol                     Rol            @default(USUARIO)
   fechaRegistro           DateTime       @default(now())
   activo                  Boolean        @default(true)
+  favoritos               Json           @default("[]")
+  guardados               Json           @default("[]")
   consultas               Consulta[]
   conversacionesRecibidas Conversacion[] @relation("admin")
   conversacionesIniciadas Conversacion[] @relation("usuario")
@@ -38,6 +40,9 @@ model Propiedad {
   banos              Int?
   contacto           String
   imagenes           String[]
+  houseTourUrl       String?
+  lat                Float?
+  lng                Float?
   destacada          Boolean       @default(false)
   activa             Boolean       @default(true)
   fechaPublicacion   DateTime      @default(now())

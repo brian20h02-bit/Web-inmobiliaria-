@@ -1,20 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PropiedadCard from '../components/PropiedadCard'
-import PropiedadModal from '../components/PropiedadModal'
 import HeroSection from '../components/HeroSection'
 import FiltrosFlotantes, { type FiltrosState } from '../components/FiltrosFlotantes'
+import SectionTitle from '../components/SectionTitle'
 import { useAuth } from '../context/AuthContext'
+import { usePropiedadModal } from '../context/PropiedadModalContext'
 import api from '../lib/api'
+import { buildPropertyCardTitle } from '../lib/propertyTitle'
 
 const FILTROS_INIT: FiltrosState = { tipo: 'todo', ciudad: '', tipoPropiedad: '', ambientes: '', banos: '' }
-
-function formatPrecio(precio: number | string | undefined): string {
-  if (!precio) return ''
-  const num = typeof precio === 'string' ? parseFloat(precio) : precio
-  if (isNaN(num)) return ''
-  return 'US$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-}
 
 interface Propiedad {
   id: string
@@ -45,7 +40,7 @@ export default function Home() {
   const [slideIdx, setSlideIdx] = useState(0)
   const [isHovering, setIsHovering] = useState(false)
   const [slideDir, setSlideDir] = useState<'next' | 'prev'>('next')
-  const [modalId, setModalId] = useState<string | null>(null)
+  const { openModal } = usePropiedadModal()
   const SLIDE_SIZE = 3
 
   const totalSlides = Math.max(1, Math.ceil(destacadas.length / SLIDE_SIZE))
@@ -67,6 +62,17 @@ export default function Home() {
     return () => clearInterval(timer)
   }, [isHovering, totalSlides, goNext])
 
+  // Suppress site-header on Home (HeroSection handles navigation)
+  useEffect(() => {
+    document.body.classList.add('home-page-active')
+    return () => document.body.classList.remove('home-page-active')
+  }, [])
+
+  function handleLogout() {
+    logout()
+    navigate('/')
+  }
+
   // Sticky detection via IntersectionObserver
   useEffect(() => {
     const el = filtrosSectionRef.current
@@ -79,9 +85,20 @@ export default function Home() {
     return () => observer.disconnect()
   }, [])
 
-  function handleLogout() {
-    logout()
-    navigate('/')
+  function scrollToProperties() {
+    const el = document.getElementById('propiedades')
+    if (!el) return
+    const offset = 72
+    const top = el.getBoundingClientRect().top + window.scrollY - offset
+    window.scrollTo({ top, behavior: 'smooth' })
+  }
+
+  function scrollToDestacadas() {
+    const el = document.getElementById('destacadas')
+    if (!el) return
+    const offset = 72
+    const top = el.getBoundingClientRect().top + window.scrollY - offset
+    window.scrollTo({ top, behavior: 'smooth' })
   }
 
   useEffect(() => {
@@ -126,8 +143,9 @@ export default function Home() {
     <div>
       {/* HERO SECTION */}
       <HeroSection 
-        onComprarClick={() => setFiltros({ ...FILTROS_INIT, tipo: 'venta' })}
-        onAlquilarClick={() => setFiltros({ ...FILTROS_INIT, tipo: 'alquiler' })}
+        onComprarClick={() => { setFiltros({ ...FILTROS_INIT, tipo: 'venta' }); scrollToProperties() }}
+        onAlquilarClick={() => { setFiltros({ ...FILTROS_INIT, tipo: 'alquiler' }); scrollToProperties() }}
+        onDescubreClick={scrollToDestacadas}
         heroImage="/hero-family.jpg"
         logoUrl="/logo-paola-castillo.png"
         user={user}
@@ -137,13 +155,14 @@ export default function Home() {
       {/* SHOWCASE CAROUSEL */}
       {destacadas.length > 0 && (
         <section
+          id="destacadas"
           className="showcase-section"
           onMouseEnter={() => setIsHovering(true)}
           onMouseLeave={() => setIsHovering(false)}
         >
           <div className="showcase-container">
             <div className="showcase-header">
-              <h2 className="section-heading">Propiedades destacadas</h2>
+              <SectionTitle title="Propiedades destacadas" />
               {totalSlides > 1 && (
                 <div className="showcase-nav-dots">
                   {Array.from({ length: totalSlides }).map((_, i) => (
@@ -174,7 +193,7 @@ export default function Home() {
               <div className={`showcase-grid showcase-slide-${slideDir}`} key={slideIdx}>
                 {/* Main card */}
                 {slideItems[0] && (
-                  <div onClick={() => setModalId(slideItems[0].id)} className="showcase-card showcase-card-main" role="button" tabIndex={0}>
+                  <div onClick={() => openModal(slideItems[0].id)} className="showcase-card showcase-card-main" role="button" tabIndex={0}>
                     <div className="showcase-card-img-wrap">
                       {slideItems[0].imagenes?.[0] && <img src={slideItems[0].imagenes[0]} alt={slideItems[0].titulo} className="showcase-card-img" loading="lazy" />}
                       <div className="showcase-card-overlay" />
@@ -183,9 +202,8 @@ export default function Home() {
                       <span className={`showcase-badge ${slideItems[0].tipo === 'VENTA' ? 'badge-venta' : slideItems[0].tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'}`}>
                         {slideItems[0].tipo === 'VENTA' ? 'Venta' : slideItems[0].tipo === 'ALQUILER' ? 'Alquiler' : slideItems[0].tipo}
                       </span>
-                      <h3 className="showcase-card-title">{slideItems[0].titulo}</h3>
+                      <h3 className="showcase-card-title">{buildPropertyCardTitle(slideItems[0].tipo, slideItems[0].titulo, slideItems[0].ubicacion)}</h3>
                       {slideItems[0].ubicacion && <p className="showcase-card-loc">{slideItems[0].ubicacion}</p>}
-                      {slideItems[0].precio && <span className="showcase-card-price">{formatPrecio(slideItems[0].precio)}</span>}
                     </div>
                   </div>
                 )}
@@ -194,7 +212,7 @@ export default function Home() {
                 {slideItems.length > 1 && (
                   <div className="showcase-side">
                     {slideItems.slice(1, 3).map((d) => (
-                      <div onClick={() => setModalId(d.id)} className="showcase-card showcase-card-small" key={d.id} role="button" tabIndex={0}>
+                      <div onClick={() => openModal(d.id)} className="showcase-card showcase-card-small" key={d.id} role="button" tabIndex={0}>
                         <div className="showcase-card-img-wrap">
                           {d.imagenes?.[0] && <img src={d.imagenes[0]} alt={d.titulo} className="showcase-card-img" loading="lazy" />}
                           <div className="showcase-card-overlay" />
@@ -203,9 +221,8 @@ export default function Home() {
                           <span className={`showcase-badge ${d.tipo === 'VENTA' ? 'badge-venta' : d.tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'}`}>
                             {d.tipo === 'VENTA' ? 'Venta' : d.tipo === 'ALQUILER' ? 'Alquiler' : d.tipo}
                           </span>
-                          <h3 className="showcase-card-title">{d.titulo}</h3>
+                          <h3 className="showcase-card-title">{buildPropertyCardTitle(d.tipo, d.titulo, d.ubicacion)}</h3>
                           {d.ubicacion && <p className="showcase-card-loc">{d.ubicacion}</p>}
-                          {d.precio && <span className="showcase-card-price">{formatPrecio(d.precio)}</span>}
                         </div>
                       </div>
                     ))}
@@ -225,9 +242,9 @@ export default function Home() {
       </section>
 
       {/* PROPIEDADES GRID SECTION */}
-      <section className="propiedades-section">
+      <section id="propiedades" className="propiedades-section">
         <div className="propiedades-container">
-          <h2 className="section-heading">Propiedades disponibles</h2>
+          <SectionTitle title="Propiedades disponibles" />
           {loading ? (
             <div className="loading">Cargando propiedades…</div>
           ) : propiedades.length === 0 ? (
@@ -235,17 +252,12 @@ export default function Home() {
           ) : (
             <div className="grid">
               {propiedades.map((p) => (
-                <PropiedadCard key={p.id} {...p} onPreview={(id: string) => setModalId(id)} />
+                <PropiedadCard key={p.id} {...p} />
               ))}
             </div>
           )}
         </div>
       </section>
-
-      {/* Property quick-view modal */}
-      {modalId && (
-        <PropiedadModal propiedadId={modalId} onClose={() => setModalId(null)} />
-      )}
     </div>
   )
 }
