@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireAdmin } from '../middleware/auth.middleware';
+import { authenticate, authenticateOptional, requireAdmin } from '../middleware/auth.middleware';
 import {
   listarDestacadas,
   listar,
@@ -9,14 +9,22 @@ import {
   eliminar,
   destacar,
   debugPropiedades,
+  registrarVisita,
+  obtenerHistorial,
+  limpiarHistorial,
+  eliminarDeHistorial,
 } from '../controllers/propiedades.controller';
 
 const router = Router();
 
 router.get('/debug/propiedades', debugPropiedades);
 router.get('/destacadas', listarDestacadas);
+router.get('/historial', authenticate, obtenerHistorial);
+router.delete('/historial', authenticate, limpiarHistorial);
+router.delete('/historial/:propId', authenticate, eliminarDeHistorial);
 router.get('/', listar);
 router.get('/:id', obtenerDetalle);
+router.post('/:id/visita', authenticateOptional, registrarVisita);
 router.post('/', authenticate, requireAdmin, crear);
 router.put('/:id', authenticate, requireAdmin, actualizar);
 router.delete('/:id', authenticate, requireAdmin, eliminar);

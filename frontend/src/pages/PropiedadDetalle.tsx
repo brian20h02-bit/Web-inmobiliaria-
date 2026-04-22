@@ -5,8 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
 import { useFavoritos } from '../context/FavoritosContext'
 import { useGuardados } from '../context/GuardadosContext'
-import UserMenu from '../components/UserMenu'
-import FiltrosFlotantes, { type FiltrosState } from '../components/FiltrosFlotantes'
+
 import api from '../lib/api'
 
 interface Propiedad {
@@ -41,7 +40,7 @@ function formatExpensas(expensas?: number | null): string {
 
 export default function PropiedadDetalle() {
   const { id } = useParams<{ id: string }>()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const { consultarPropiedad, isLoading: chatLoading } = useChat()
   const { isFavorito, toggleFavorito } = useFavoritos()
@@ -53,31 +52,7 @@ export default function PropiedadDetalle() {
   const [imgIdx, setImgIdx] = useState(0)
   const [lightboxOpen, setLightboxOpen] = useState(false)
   const [houseTourOpen, setHouseTourOpen] = useState(false)
-  const [filterActive, setFilterActive] = useState<'todo' | 'venta' | 'alquiler' | 'otro'>('todo')
-  const [filtros, setFiltros] = useState<FiltrosState>({ tipo: 'todo', ciudad: '', tipoPropiedad: '', ambientes: '', banos: '' })
 
-  // Suppress the site-header on this page only
-  useEffect(() => {
-    document.body.classList.add('pd-page-active')
-    return () => document.body.classList.remove('pd-page-active')
-  }, [])
-
-  function handleLogout() {
-    logout()
-    navigate('/')
-  }
-
-  function handleFiltrosChange(f: FiltrosState) {
-    setFiltros(f)
-    setFilterActive(f.tipo as 'todo' | 'venta' | 'alquiler' | 'otro')
-    const params = new URLSearchParams()
-    if (f.tipo !== 'todo') params.set('tipo', f.tipo)
-    if (f.ciudad) params.set('ciudad', f.ciudad)
-    if (f.tipoPropiedad) params.set('tipoPropiedad', f.tipoPropiedad)
-    if (f.ambientes) params.set('ambientes', f.ambientes)
-    if (f.banos) params.set('banos', f.banos)
-    navigate(`/?${params.toString()}`)
-  }
   const [consultaEnviada, setConsultaEnviada] = useState(false)
 
   useEffect(() => {
@@ -90,6 +65,7 @@ export default function PropiedadDetalle() {
         else setError('Error al cargar la propiedad.')
       })
       .finally(() => setLoading(false))
+    api.post(`/propiedades/${id}/visita`).catch(() => null)
   }, [id])
 
   useEffect(() => {
@@ -171,31 +147,6 @@ export default function PropiedadDetalle() {
 
   return (
     <div className="pd-root">
-
-      {/* ── LOGO FIJO (no sticky, fixed al viewport) ─────────────────── */}
-      <div className="pd-fixed-logo">
-        <Link to="/">
-          <img src="/logo-paola-castillo.png" alt="Paola V Castillo Inmobiliaria" className="pd-fixed-logo-img" />
-        </Link>
-      </div>
-
-      {/* ── MENÚ DE USUARIO FIJO (top-right, no sticky) ──────────────── */}
-      {user && (
-        <div className="pd-fixed-user">
-          <UserMenu email={user.email} onLogout={handleLogout} />
-        </div>
-      )}
-      {!user && (
-        <div className="pd-fixed-user pd-fixed-user--auth">
-          <Link to="/login" className="pd-topnav-auth-link">Iniciar sesión</Link>
-          <Link to="/registro" className="pd-topnav-auth-link pd-topnav-auth-link--primary">Registrarse</Link>
-        </div>
-      )}
-
-      {/* ── FILTROS STICKY CENTRADOS (mismos que Home) ─────────────── */}
-      <div className="pd-sticky-filters">
-        <FiltrosFlotantes filtros={filtros} onChange={handleFiltrosChange} />
-      </div>
 
       {/* ── GALERÍA HERO ──────────────────────────────────────────────── */}
       <motion.div

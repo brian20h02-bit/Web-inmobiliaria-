@@ -48,6 +48,8 @@ export default function PropiedadesAdmin() {
   const [showPanel, setShowPanel] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [existingImages, setExistingImages] = useState<string[]>([])
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroDestacada, setFiltroDestacada] = useState<'TODAS' | 'DESTACADAS' | 'NO_DESTACADAS'>('TODAS')
 
   // Form state
   const [imageFiles, setImageFiles] = useState<File[]>([])
@@ -428,48 +430,85 @@ export default function PropiedadesAdmin() {
           <button onClick={() => { resetForm(); setShowPanel(true) }} className="btn btn-primary" style={{ marginTop: 12 }}>+ Agregar la primera propiedad</button>
         </div>
       ) : (
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Imagen</th>
-              <th>Título</th>
-              <th>Tipo</th>
-              <th>Precio</th>
-              <th>Destacada</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {propiedades.map((p) => (
-              <tr key={p.id}>
-                <td>
-                  {p.imagenes?.[0] ? (
-                    <img src={p.imagenes[0]} alt={p.titulo} style={{ width: 60, height: 45, objectFit: 'cover', borderRadius: 4 }} />
-                  ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Sin imagen</span>}
-                </td>
-                <td>{p.titulo}</td>
-                <td><span className="badge">{p.tipo}</span></td>
-                <td>${p.precio?.toLocaleString()}</td>
-                <td>
-                  <button
-                    className={`star-toggle${p.destacada ? ' star-toggle--active' : ''}`}
-                    onClick={() => toggleDestacada(p.id, p.destacada)}
-                    title={p.destacada ? 'Quitar de destacadas' : 'Marcar como destacada'}
-                    aria-label={p.destacada ? 'Quitar destacada' : 'Destacar propiedad'}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill={p.destacada ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                    </svg>
-                  </button>
-                </td>
-                <td className="table-actions">
-                  <button onClick={() => openEdit(p)} className="btn btn-outline btn-sm">Editar</button>
-                  <button onClick={() => handleDelete(p.id)} className="btn btn-danger btn-sm">Eliminar</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          {/* Buscador + filtros */}
+          <div className="admin-filters-bar">
+            <div className="admin-search-wrap">
+              <svg className="admin-search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input
+                className="admin-search-input"
+                type="text"
+                placeholder="Buscar por título o ubicación…"
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
+              {busqueda && <button className="admin-search-clear" onClick={() => setBusqueda('')}>✕</button>}
+            </div>
+            <div className="admin-filter-tabs">
+              {(['TODAS', 'DESTACADAS', 'NO_DESTACADAS'] as const).map((f) => (
+                <button key={f} className={`admin-filter-tab${filtroDestacada === f ? ' active' : ''}`} onClick={() => setFiltroDestacada(f)}>
+                  {f === 'TODAS' ? 'Todas' : f === 'DESTACADAS' ? '★ Destacadas' : 'No destacadas'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {(() => {
+            const filtradas = propiedades.filter((p) => {
+              const q = busqueda.toLowerCase()
+              const matchSearch = p.titulo.toLowerCase().includes(q) || (p.ubicacion || '').toLowerCase().includes(q)
+              const matchDest = filtroDestacada === 'TODAS' || (filtroDestacada === 'DESTACADAS' ? p.destacada : !p.destacada)
+              return matchSearch && matchDest
+            })
+            if (filtradas.length === 0) return <p className="empty">No se encontraron propiedades.</p>
+            return (
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Imagen</th>
+                    <th>Título</th>
+                    <th>Tipo</th>
+                    <th>Precio</th>
+                    <th>Destacada</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtradas.map((p) => (
+                    <tr key={p.id}>
+                      <td>
+                        {p.imagenes?.[0] ? (
+                          <img src={p.imagenes[0]} alt={p.titulo} style={{ width: 60, height: 45, objectFit: 'cover', borderRadius: 4 }} />
+                        ) : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Sin imagen</span>}
+                      </td>
+                      <td style={{ maxWidth: 220 }}>
+                        <p style={{ fontWeight: 500, marginBottom: 2 }}>{p.titulo}</p>
+                        {p.ubicacion && <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{p.ubicacion}</p>}
+                      </td>
+                      <td><span className="badge">{p.tipo}</span></td>
+                      <td style={{ fontWeight: 600 }}>US$ {Number(p.precio).toLocaleString('es-AR')}</td>
+                      <td>
+                        <button
+                          className={`star-toggle${p.destacada ? ' star-toggle--active' : ''}`}
+                          onClick={() => toggleDestacada(p.id, p.destacada)}
+                          title={p.destacada ? 'Quitar de destacadas' : 'Marcar como destacada'}
+                        >
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill={p.destacada ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                          </svg>
+                        </button>
+                      </td>
+                      <td className="table-actions">
+                        <button onClick={() => openEdit(p)} className="btn btn-outline btn-sm">Editar</button>
+                        <button onClick={() => handleDelete(p.id)} className="btn btn-danger btn-sm">Eliminar</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
+          })()}
+        </>
       )}
     </div>
   )

@@ -245,6 +245,10 @@ export default function UserMenu({ email, onLogout, isAdmin = false }: UserMenuP
                 Guardados
                 {guardados.length > 0 && <span className="user-dropdown-badge">{guardados.length}</span>}
               </button>
+              <Link to="/historial" className="user-dropdown-item" onClick={() => setDropdownOpen(false)}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                Historial
+              </Link>
               {isAdmin && (
                 <>
                   <div className="user-dropdown-separator" />

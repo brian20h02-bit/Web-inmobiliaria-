@@ -50,7 +50,7 @@ interface ChatContextType {
   abrirConversacion: (conversacionId: string) => Promise<void>
   cerrarConversacion: () => void
   enviarMensaje: (conversacionId: string, contenido: string) => Promise<void>
-  consultarPropiedad: (propiedadId: string, tituloProp: string, mensajePersonalizado?: string) => Promise<void>
+   consultarPropiedad: (propiedadId: string, tituloProp: string, mensajePersonalizado?: string) => Promise<void>
   crearConversacionGeneral: () => Promise<void>
   cargarConversaciones: () => Promise<void>
   cargarNoLeidos: () => Promise<void>

@@ -18,6 +18,7 @@ model Usuario {
   activo                  Boolean        @default(true)
   favoritos               Json           @default("[]")
   guardados               Json           @default("[]")
+  historial               Json           @default("[]")
   consultas               Consulta[]
   conversacionesRecibidas Conversacion[] @relation("admin")
   conversacionesIniciadas Conversacion[] @relation("usuario")
@@ -43,6 +44,7 @@ model Propiedad {
   houseTourUrl       String?
   lat                Float?
   lng                Float?
+  visitas            Int           @default(0)
   destacada          Boolean       @default(false)
   activa             Boolean       @default(true)
   fechaPublicacion   DateTime      @default(now())

@@ -65,6 +65,7 @@ export default function PropiedadModal() {
       .then((r) => setProp(r.data))
       .catch(() => setProp(null))
       .finally(() => setLoading(false))
+    api.post(`/propiedades/${propiedadId}/visita`).catch(() => null)
   }, [propiedadId])
 
   // Lock body scroll — tied to propiedadId so cleanup always fires on close

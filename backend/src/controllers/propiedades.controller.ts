@@ -442,3 +442,138 @@ export async function debugPropiedades(req: Request, res: Response): Promise<voi
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
+
+export async function registrarVisita(req: Request, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    // Increment visitas atomically
+    await prisma.propiedad.update({
+      where: { id },
+      data: { visitas: { increment: 1 } },
+    });
+
+    // If user is authenticated, update their historial
+    if (req.user) {
+      const usuario = await prisma.usuario.findUnique({
+        where: { id: req.user.id },
+        select: { historial: true },
+      });
+
+      if (usuario) {
+        const historial = (usuario.historial as Array<{ id: string; ts: number }>) || [];
+        const filtered = historial.filter((h) => h.id !== id);
+        const updated = [{ id, ts: Date.now() }, ...filtered].slice(0, 50);
+
+        await prisma.usuario.update({
+          where: { id: req.user.id },
+          data: { historial: updated },
+        });
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Error al registrar visita:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function obtenerHistorial(req: Request, res: Response): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ error: 'No autenticado' }); return; }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.user.id },
+      select: { historial: true },
+    });
+
+    const historial = (usuario?.historial as Array<{ id: string; ts: number }>) || [];
+    if (historial.length === 0) { res.json([]); return; }
+
+    const ids = historial.map((h) => h.id);
+    const propiedades = await prisma.propiedad.findMany({
+      where: { id: { in: ids }, activa: true },
+      select: {
+        id: true,
+        titulo: true,
+        descripcionPublica: true,
+        tipo: true,
+        precio: true,
+        ubicacion: true,
+        imagenes: true,
+        metrosCuadrados: true,
+        ambientes: true,
+        banos: true,
+      },
+    });
+
+    // Sort by historial order (most recent first) and include visitadoEn
+    const sorted = ids
+      .map((id) => {
+        const prop = propiedades.find((p) => p.id === id)
+        const entry = historial.find((h) => h.id === id)
+        if (!prop) return null
+        return { ...prop, visitadoEn: entry?.ts ?? null }
+      })
+      .filter(Boolean);
+
+    res.json(sorted);
+  } catch (error) {
+    console.error('Error al obtener historial:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function eliminarDeHistorial(req: Request, res: Response): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ error: 'No autenticado' }); return; }
+    const { propId } = req.params;
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.user.id },
+      select: { historial: true },
+    });
+    const historial = (usuario?.historial as Array<{ id: string; ts: number }>) || [];
+    const updated = historial.filter((h) => h.id !== propId);
+    await prisma.usuario.update({
+      where: { id: req.user.id },
+      data: { historial: updated },
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function eliminarDeHistorial(req: Request, res: Response): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ error: 'No autenticado' }); return; }
+    const { propId } = req.params;
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.user.id },
+      select: { historial: true },
+    });
+    const historial = (usuario?.historial as Array<{ id: string; ts: number }>) || [];
+    const updated = historial.filter((h) => h.id !== propId);
+    await prisma.usuario.update({
+      where: { id: req.user.id },
+      data: { historial: updated },
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
+
+export async function limpiarHistorial(req: Request, res: Response): Promise<void> {
+  try {
+    if (!req.user) { res.status(401).json({ error: 'No autenticado' }); return; }
+    await prisma.usuario.update({
+      where: { id: req.user.id },
+      data: { historial: [] },
+    });
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+}
