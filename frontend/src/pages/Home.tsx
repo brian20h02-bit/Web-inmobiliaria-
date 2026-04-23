@@ -7,7 +7,6 @@ import SectionTitle from '../components/SectionTitle'
 import { useAuth } from '../context/AuthContext'
 import { usePropiedadModal } from '../context/PropiedadModalContext'
 import api from '../lib/api'
-import { buildPropertyCardTitle } from '../lib/propertyTitle'
 
 const FILTROS_INIT: FiltrosState = { tipo: 'todo', ciudad: '', tipoPropiedad: '', ambientes: '', banos: '' }
 
@@ -202,7 +201,7 @@ export default function Home() {
                       <span className={`showcase-badge ${slideItems[0].tipo === 'VENTA' ? 'badge-venta' : slideItems[0].tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'}`}>
                         {slideItems[0].tipo === 'VENTA' ? 'Venta' : slideItems[0].tipo === 'ALQUILER' ? 'Alquiler' : slideItems[0].tipo}
                       </span>
-                      <h3 className="showcase-card-title">{buildPropertyCardTitle(slideItems[0].tipo, slideItems[0].titulo, slideItems[0].ubicacion)}</h3>
+                      <h3 className="showcase-card-title">{slideItems[0].titulo}</h3>
                       {slideItems[0].ubicacion && <p className="showcase-card-loc">{slideItems[0].ubicacion}</p>}
                     </div>
                   </div>
@@ -221,7 +220,7 @@ export default function Home() {
                           <span className={`showcase-badge ${d.tipo === 'VENTA' ? 'badge-venta' : d.tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'}`}>
                             {d.tipo === 'VENTA' ? 'Venta' : d.tipo === 'ALQUILER' ? 'Alquiler' : d.tipo}
                           </span>
-                          <h3 className="showcase-card-title">{buildPropertyCardTitle(d.tipo, d.titulo, d.ubicacion)}</h3>
+                          <h3 className="showcase-card-title">{d.titulo}</h3>
                           {d.ubicacion && <p className="showcase-card-loc">{d.ubicacion}</p>}
                         </div>
                       </div>

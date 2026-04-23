@@ -22,7 +22,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // Don't redirect on 401 for delete-account — let the caller handle it
+    const url = error.config?.url || ''
+    if (error.response?.status === 401 && !url.includes('/auth/cuenta')) {
       removeToken()
       window.location.href = '/login'
     }

@@ -317,3 +317,50 @@ export async function googleAuth(req: Request, res: Response): Promise<void> {
     res.status(401).json({ error: 'Token de Google inválido' })
   }
 }
+
+// ── DELETE /auth/cuenta ──────────────────────────────────────────────────────
+
+export async function deleteAccount(req: Request, res: Response): Promise<void> {
+  if (!req.user) {
+    res.status(401).json({ error: 'No autorizado' })
+    return
+  }
+
+  const userId = req.user.id
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      // 1. Mensajes en consultas del usuario
+      await tx.mensaje.deleteMany({ where: { consulta: { usuarioId: userId } } })
+      // 2. Mensajes escritos por el usuario en cualquier consulta
+      await tx.mensaje.deleteMany({ where: { autorId: userId } })
+      // 3. Consultas del usuario
+      await tx.consulta.deleteMany({ where: { usuarioId: userId } })
+      // 4. MensajeChat emitidos por el usuario
+      await tx.mensajeChat.deleteMany({ where: { emisorId: userId } })
+      // 5. MensajeChat en conversaciones del usuario (emitidos por otros)
+      await tx.mensajeChat.deleteMany({
+        where: { conversacion: { OR: [{ usuarioId: userId }, { adminId: userId }] } }
+      })
+      // 6. Conversaciones
+      await tx.conversacion.deleteMany({
+        where: { OR: [{ usuarioId: userId }, { adminId: userId }] }
+      })
+      // 7. Propiedades del usuario (si es admin) — primero sus consultas/mensajes
+      const props = await tx.propiedad.findMany({ where: { administradorId: userId }, select: { id: true } })
+      if (props.length > 0) {
+        const propIds = props.map(p => p.id)
+        await tx.mensaje.deleteMany({ where: { consulta: { propiedadId: { in: propIds } } } })
+        await tx.consulta.deleteMany({ where: { propiedadId: { in: propIds } } })
+        await tx.conversacion.deleteMany({ where: { propiedadId: { in: propIds } } })
+        await tx.propiedad.deleteMany({ where: { id: { in: propIds } } })
+      }
+      // 8. El usuario
+      await tx.usuario.delete({ where: { id: userId } })
+    })
+    res.json({ message: 'Cuenta eliminada correctamente' })
+  } catch (err) {
+    console.error('Error deleting account:', JSON.stringify(err, null, 2))
+    res.status(500).json({ error: 'Error al eliminar la cuenta' })
+  }
+}

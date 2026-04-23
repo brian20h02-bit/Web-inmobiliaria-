@@ -7,6 +7,7 @@ import { GuardadosProvider } from './context/GuardadosContext'
 import { PropiedadModalProvider } from './context/PropiedadModalContext'
 import PropiedadModal from './components/PropiedadModal'
 import Layout from './components/Layout'
+import LegalLayout from './components/LegalLayout'
 import AppLayout from './components/AppLayout'
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -15,6 +16,9 @@ import PropiedadDetalle from './pages/PropiedadDetalle'
 import Login from './pages/Login'
 import Registro from './pages/Registro'
 import VerifyEmail from './pages/VerifyEmail'
+import Privacidad from './pages/legal/Privacidad'
+import Terminos from './pages/legal/Terminos'
+import Cookies from './pages/legal/Cookies'
 import Dashboard from './pages/admin/Dashboard'
 import PropiedadesAdmin from './pages/admin/PropiedadesAdmin'
 import UsuariosAdmin from './pages/admin/UsuariosAdmin'
@@ -36,11 +40,18 @@ export default function App() {
             <ChatProvider>
               <>
                 <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/registro" element={<Registro />} />
+                  <Route path="/verify-email" element={<VerifyEmail />} />
+
                   <Route element={<Layout />}>
                     <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/registro" element={<Registro />} />
-                    <Route path="/verify-email" element={<VerifyEmail />} />
+                  </Route>
+
+                  <Route element={<LegalLayout />}>
+                    <Route path="/privacidad" element={<Privacidad />} />
+                    <Route path="/terminos" element={<Terminos />} />
+                    <Route path="/cookies" element={<Cookies />} />
                   </Route>
 
                   <Route element={<AppLayout />}>

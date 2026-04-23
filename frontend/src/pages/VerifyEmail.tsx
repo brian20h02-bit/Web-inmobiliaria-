@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
+import Footer from '../components/Footer'
 
 type Status = 'loading' | 'success' | 'error' | 'expired'
 
@@ -57,6 +58,7 @@ export default function VerifyEmail() {
   }
 
   return (
+    <>
     <div className="auth-page">
       <div className="auth-card">
         <h1 className="auth-title">Verificación de email</h1>
@@ -105,5 +107,7 @@ export default function VerifyEmail() {
         )}
       </div>
     </div>
+    <Footer />
+    </>
   )
 }

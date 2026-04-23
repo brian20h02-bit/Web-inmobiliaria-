@@ -139,12 +139,8 @@ export default function PropiedadCard({ id, titulo, descripcionPublica, tipo, pr
 
         {/* Overlay content — bottom */}
         <div className="prop-card-overlay-info">
-          <h3 className="prop-card-title-overlay">{displayTitle}</h3>
-          {ubicacion && (
-            <p className="prop-card-location-overlay">
-              {ubicacion}
-            </p>
-          )}
+          <h3 className="prop-card-title-overlay">{titulo}</h3>
+          {ubicacion && <p className="prop-card-location-overlay">{ubicacion}</p>}
         </div>
 
         {/* Fav */}

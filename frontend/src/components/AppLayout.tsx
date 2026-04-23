@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import PropertyHeader from './PropertyHeader'
+import Footer from './Footer'
 
 export default function AppLayout() {
   return (
@@ -8,6 +9,7 @@ export default function AppLayout() {
       <main className="app-layout-main">
         <Outlet />
       </main>
+      <Footer />
     </div>
   )
 }

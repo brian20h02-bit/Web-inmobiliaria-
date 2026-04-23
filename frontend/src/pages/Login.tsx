@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
+import Footer from '../components/Footer'
 
 export default function Login() {
   const { login } = useAuth()
@@ -70,7 +71,11 @@ export default function Login() {
   }
 
   return (
+    <>
     <div className="auth-page">
+      <div className="auth-logo-wrap">
+        <Link to="/"><img src="/logo-paola-castillo.png" alt="Paola Castillo Inmobiliaria" className="auth-logo" /></Link>
+      </div>
       <div className="auth-card">
         <h1 className="auth-title">Iniciar sesión</h1>
         {error && <p className="error-msg">{error}</p>}
@@ -139,5 +144,7 @@ export default function Login() {
         </p>
       </div>
     </div>
+    <Footer />
+    </>
   )
 }

@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <!-- Gradiente principal: azul oscuro → azul medio (diagonal, igual que el logo) -->
+    <linearGradient id="grad-outer" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#162f5e"/>
+      <stop offset="55%"  stop-color="#1e4a8a"/>
+      <stop offset="100%" stop-color="#3a6db8"/>
+    </linearGradient>
+
+    <!-- Gradiente interior: ligeramente más brillante para profundidad -->
+    <linearGradient id="grad-inner" x1="10" y1="10" x2="54" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#1e3f7a"/>
+      <stop offset="100%" stop-color="#4d7ec9"/>
+    </linearGradient>
+
+    <!-- Gradiente del centro -->
+    <linearGradient id="grad-center" x1="24" y1="24" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%"   stop-color="#0e1e3c"/>
+      <stop offset="100%" stop-color="#264f96"/>
+    </linearGradient>
+
+    <!-- Filtro de sombra suave para profundidad -->
+    <filter id="petal-shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="0.5" stdDeviation="0.8" flood-color="#000b1e" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- ──────────────────────────────────────────── -->
+  <!-- PÉTALOS EXTERIORES (5, cada 72°)            -->
+  <!-- Pétalo: punta arriba, base en el centro     -->
+  <!-- Shape: cúbica bezier, orgánico y suave      -->
+  <!-- ──────────────────────────────────────────── -->
+  <g filter="url(#petal-shadow)">
+    <!-- 0° — arriba -->
+    <path d="M32,32 C23,21 23,9 32,6 C41,9 41,21 32,32Z"
+          fill="url(#grad-outer)" stroke="rgba(255,255,255,0.75)" stroke-width="1.1" stroke-linejoin="round"/>
+    <!-- 72° -->
+    <path d="M32,32 C23,21 23,9 32,6 C41,9 41,21 32,32Z"
+          fill="url(#grad-outer)" stroke="rgba(255,255,255,0.75)" stroke-width="1.1" stroke-linejoin="round"
+          transform="rotate(72,32,32)"/>
+    <!-- 144° -->
+    <path d="M32,32 C23,21 23,9 32,6 C41,9 41,21 32,32Z"
+          fill="url(#grad-outer)" stroke="rgba(255,255,255,0.75)" stroke-width="1.1" stroke-linejoin="round"
+          transform="rotate(144,32,32)"/>
+    <!-- 216° -->
+    <path d="M32,32 C23,21 23,9 32,6 C41,9 41,21 32,32Z"
+          fill="url(#grad-outer)" stroke="rgba(255,255,255,0.75)" stroke-width="1.1" stroke-linejoin="round"
+          transform="rotate(216,32,32)"/>
+    <!-- 288° -->
+    <path d="M32,32 C23,21 23,9 32,6 C41,9 41,21 32,32Z"
+          fill="url(#grad-outer)" stroke="rgba(255,255,255,0.75)" stroke-width="1.1" stroke-linejoin="round"
+          transform="rotate(288,32,32)"/>
+  </g>
+
+  <!-- ──────────────────────────────────────────── -->
+  <!-- PÉTALOS INTERIORES (5, desplazados 36°)     -->
+  <!-- Más cortos y estrechos → profundidad de rosa -->
+  <!-- ──────────────────────────────────────────── -->
+  <!-- 36° -->
+  <path d="M32,32 C27,24 27,15 32,13 C37,15 37,24 32,32Z"
+        fill="url(#grad-inner)" stroke="rgba(255,255,255,0.6)" stroke-width="0.9" stroke-linejoin="round"
+        transform="rotate(36,32,32)"/>
+  <!-- 108° -->
+  <path d="M32,32 C27,24 27,15 32,13 C37,15 37,24 32,32Z"
+        fill="url(#grad-inner)" stroke="rgba(255,255,255,0.6)" stroke-width="0.9" stroke-linejoin="round"
+        transform="rotate(108,32,32)"/>
+  <!-- 180° -->
+  <path d="M32,32 C27,24 27,15 32,13 C37,15 37,24 32,32Z"
+        fill="url(#grad-inner)" stroke="rgba(255,255,255,0.6)" stroke-width="0.9" stroke-linejoin="round"
+        transform="rotate(180,32,32)"/>
+  <!-- 252° -->
+  <path d="M32,32 C27,24 27,15 32,13 C37,15 37,24 32,32Z"
+        fill="url(#grad-inner)" stroke="rgba(255,255,255,0.6)" stroke-width="0.9" stroke-linejoin="round"
+        transform="rotate(252,32,32)"/>
+  <!-- 324° -->
+  <path d="M32,32 C27,24 27,15 32,13 C37,15 37,24 32,32Z"
+        fill="url(#grad-inner)" stroke="rgba(255,255,255,0.6)" stroke-width="0.9" stroke-linejoin="round"
+        transform="rotate(324,32,32)"/>
+
+  <!-- ──────────────────────────────────────────── -->
+  <!-- CENTRO DE LA ROSA                            -->
+  <!-- ──────────────────────────────────────────── -->
+  <!-- Anillo exterior del centro -->
+  <circle cx="32" cy="32" r="8.5"
+          fill="url(#grad-center)" stroke="rgba(255,255,255,0.85)" stroke-width="1.4"/>
+  <!-- Brillo interior del botón central -->
+  <circle cx="32" cy="32" r="5"
+          fill="#3a6db8" opacity="0.9"/>
+  <!-- Punto central destacado -->
+  <circle cx="32" cy="32" r="2.5"
+          fill="#6da0db"/>
+</svg>

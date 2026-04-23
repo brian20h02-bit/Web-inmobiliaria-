@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
+import Footer from '../components/Footer'
 
 export default function Registro() {
   const { login } = useAuth()
@@ -11,6 +12,7 @@ export default function Registro() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [serverError, setServerError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -46,6 +48,9 @@ export default function Registro() {
       e.confirmPassword = 'Confirmá tu contraseña.'
     } else if (password !== confirmPassword) {
       e.confirmPassword = 'Las contraseñas no coinciden.'
+    }
+    if (!termsAccepted) {
+      e.terms = 'Debés aceptar los Términos y Condiciones para continuar.'
     }
     setErrors(e)
     return Object.keys(e).length === 0
@@ -99,7 +104,11 @@ export default function Registro() {
   }
 
   return (
+    <>
     <div className="auth-page">
+      <div className="auth-logo-wrap">
+        <Link to="/"><img src="/logo-paola-castillo.png" alt="Paola Castillo Inmobiliaria" className="auth-logo" /></Link>
+      </div>
       <div className="auth-card">
         <h1 className="auth-title">Crear cuenta</h1>
         {serverError && <p className="error-msg">{serverError}</p>}
@@ -156,6 +165,23 @@ export default function Registro() {
             />
             {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
           </div>
+          <div className="form-group">
+            <label className="terms-label">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="terms-checkbox"
+              />
+              <span>
+                Acepto los{' '}
+                <Link to="/terminos" target="_blank" className="terms-link">Términos y Condiciones</Link>
+                {' '}y la{' '}
+                <Link to="/privacidad" target="_blank" className="terms-link">Política de Privacidad</Link>
+              </span>
+            </label>
+            {errors.terms && <span className="field-error">{errors.terms}</span>}
+          </div>
           <button type="submit" disabled={loading} className="btn btn-primary btn-full">
             {loading ? 'Registrando…' : 'Crear cuenta'}
           </button>
@@ -179,5 +205,7 @@ export default function Registro() {
         </p>
       </div>
     </div>
+    <Footer />
+    </>
   )
 }

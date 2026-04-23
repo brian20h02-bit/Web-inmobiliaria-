@@ -1,10 +1,134 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFavoritos } from '../context/FavoritosContext'
 import { useGuardados } from '../context/GuardadosContext'
 import { usePropiedadModal } from '../context/PropiedadModalContext'
 import { buildPropertyCardTitle } from '../lib/propertyTitle'
+import api from '../lib/api'
+
+// ── Module-level constants & components (stable across renders) ───────────────
+const dropdownVariants = {
+  hidden:  { opacity: 0, scale: 0.95, y: -8 },
+  visible: { opacity: 1, scale: 1,    y: 0  },
+  exit:    { opacity: 0, scale: 0.95, y: -8 },
+}
+const drawerVariants = {
+  hidden:  { x: '100%', opacity: 0 },
+  visible: { x: 0,      opacity: 1 },
+  exit:    { x: '100%', opacity: 0 },
+}
+const overlayVariants = {
+  hidden:  { opacity: 0 },
+  visible: { opacity: 1 },
+  exit:    { opacity: 0 },
+}
+const cardItemVariants = {
+  rest:  { scale: 1,    backgroundColor: 'rgba(249,250,251,1)' },
+  hover: { scale: 1.01, backgroundColor: 'rgba(243,244,246,1)' },
+  tap:   { scale: 0.98 },
+}
+
+function CloseIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  )
+}
+
+interface FavItem {
+  id: string
+  titulo: string
+  tipo: string
+  ubicacion?: string
+  imagenUrl?: string
+  precio?: number | string
+}
+
+function PropList({ items, onRemove, onItemClick, emptyIcon, emptyText }: {
+  items: FavItem[]
+  onRemove: (p: FavItem) => void
+  onItemClick: (id: string) => void
+  emptyIcon: string
+  emptyText: string
+}) {
+  if (items.length === 0) {
+    return (
+      <p className="user-drawer-empty">
+        {emptyIcon}<br />{emptyText}
+      </p>
+    )
+  }
+  return (
+    <div className="user-drawer-list">
+      {items.map((p) => (
+        <motion.div
+          key={p.id}
+          className="user-drawer-prop-item"
+          variants={cardItemVariants}
+          initial="rest"
+          whileHover="hover"
+          whileTap="tap"
+          transition={{ duration: 0.15, ease: 'easeOut' }}
+          onClick={() => onItemClick(p.id)}
+          style={{ cursor: 'pointer' }}
+        >
+          {p.imagenUrl
+            ? <img src={p.imagenUrl} alt={p.titulo} className="user-drawer-prop-img" loading="lazy" />
+            : <div className="user-drawer-prop-img user-drawer-prop-img--placeholder" />
+          }
+          <div className="user-drawer-prop-info">
+            <span className="user-drawer-prop-title">{buildPropertyCardTitle(p.tipo, p.titulo, p.ubicacion)}</span>
+            {p.ubicacion && <span className="user-drawer-prop-loc">{p.ubicacion}</span>}
+            {p.tipo && (
+              <span className="user-drawer-prop-badge">{p.tipo === 'venta' ? 'VENTA' : 'ALQUILER'}</span>
+            )}
+          </div>
+          <button
+            className="user-drawer-prop-remove"
+            onClick={(e) => { e.stopPropagation(); onRemove(p) }}
+            aria-label="Quitar"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </motion.div>
+      ))}
+    </div>
+  )
+}
+
+interface DrawerPanelProps {
+  isOpen: boolean
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+}
+
+function DrawerPanel({ isOpen, title, onClose, children }: DrawerPanelProps) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="user-drawer"
+          variants={drawerVariants}
+          initial="hidden"
+          animate="visible"
+          exit="exit"
+          transition={{ duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] as any }}
+        >
+          <div className="user-drawer-header">
+            <h2 className="user-drawer-title">{title}</h2>
+            <button className="user-drawer-close" onClick={onClose} aria-label="Cerrar"><CloseIcon /></button>
+          </div>
+          <div className="user-drawer-body">{children}</div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
 
 interface UserMenuProps {
   email: string
@@ -36,8 +160,12 @@ export default function UserMenu({ email, onLogout, isAdmin = false }: UserMenuP
   const [panel, setPanel] = useState<Panel>(null)
   const [profile, setProfile] = useState<UserProfile>(loadProfile)
   const [savedMsg, setSavedMsg] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { openModal } = usePropiedadModal()
+  const navigate = useNavigate()
 
   const { favoritos, toggleFavorito } = useFavoritos()
   const { guardados, toggleGuardado } = useGuardados()
@@ -80,6 +208,24 @@ export default function UserMenu({ email, onLogout, isAdmin = false }: UserMenuP
     setPanel(null)
     setDropdownOpen(false)
     onLogout()
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteLoading(true)
+    setDeleteError('')
+    try {
+      await api.delete('/auth/cuenta')
+      setShowDeleteConfirm(false)
+      setPanel(null)
+      onLogout()
+      navigate('/')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string }; status?: number } }
+      const msg = e?.response?.data?.error || 'Error al eliminar la cuenta. Intentá de nuevo.'
+      console.error('Delete account error:', e?.response?.status, e?.response?.data)
+      setDeleteError(msg)
+      setDeleteLoading(false)
+    }
   }
 
   function goToProperty(id: string) {
@@ -284,7 +430,7 @@ export default function UserMenu({ email, onLogout, isAdmin = false }: UserMenuP
       </AnimatePresence>
 
       {/* ── Cuenta drawer ── */}
-      <Drawer id="cuenta" title="Mi cuenta">
+      <DrawerPanel isOpen={panel === 'cuenta'} title="Mi cuenta" onClose={() => setPanel(null)}>
         <div className="user-drawer-field">
           <label>Nombre</label>
           <input value={profile.nombre} onChange={(e) => setProfile((p) => ({ ...p, nombre: e.target.value }))} placeholder="Tu nombre" />
@@ -308,27 +454,57 @@ export default function UserMenu({ email, onLogout, isAdmin = false }: UserMenuP
         <button className={`user-drawer-save${savedMsg ? ' saved' : ''}`} onClick={saveProfile}>
           {savedMsg ? '✓ Cambios guardados' : 'Guardar cambios'}
         </button>
-      </Drawer>
+
+        {!showDeleteConfirm ? (
+          <button className="user-drawer-delete-btn" onClick={() => setShowDeleteConfirm(true)}>
+            Eliminar cuenta
+          </button>
+        ) : (
+          <div className="delete-confirm-inline">
+            <p className="delete-confirm-inline-title">¿Estás seguro de querer eliminar tu cuenta?</p>
+            <p className="delete-confirm-inline-desc">Esta acción es irreversible. Se borrarán todos tus datos.</p>
+            {deleteError && <p className="delete-confirm-inline-error">{deleteError}</p>}
+            <div className="delete-confirm-actions">
+              <button
+                className="delete-confirm-cancel"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteLoading}
+              >
+                Cancelar
+              </button>
+              <button
+                className="delete-confirm-accept"
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading}
+              >
+                {deleteLoading ? 'Eliminando…' : 'Aceptar'}
+              </button>
+            </div>
+          </div>
+        )}
+      </DrawerPanel>
 
       {/* ── Favoritos drawer ── */}
-      <Drawer id="favoritos" title="Mis favoritos">
+      <DrawerPanel isOpen={panel === 'favoritos'} title="Mis favoritos" onClose={() => setPanel(null)}>
         <PropList
           items={favoritos}
           onRemove={toggleFavorito}
+          onItemClick={goToProperty}
           emptyIcon="❤️"
           emptyText="No tenés propiedades favoritas aún. Tocá el ❤️ en cualquier card para guardarla aquí."
         />
-      </Drawer>
+      </DrawerPanel>
 
       {/* ── Guardados drawer ── */}
-      <Drawer id="guardados" title="Propiedades guardadas">
+      <DrawerPanel isOpen={panel === 'guardados'} title="Propiedades guardadas" onClose={() => setPanel(null)}>
         <PropList
           items={guardados}
           onRemove={toggleGuardado}
+          onItemClick={goToProperty}
           emptyIcon="🔖"
           emptyText="No tenés propiedades guardadas aún. Tocá el 🔖 en cualquier card para guardarla aquí."
         />
-      </Drawer>
+      </DrawerPanel>
     </>
   )
 }
