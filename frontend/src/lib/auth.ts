@@ -16,6 +16,7 @@ interface JWTPayload {
   id: string
   email: string
   rol: string
+  nombre?: string
   exp?: number
 }
 

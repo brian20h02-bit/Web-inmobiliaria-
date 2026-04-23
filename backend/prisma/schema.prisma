@@ -12,7 +12,13 @@ model Usuario {
   id                      String         @id @default(uuid())
   nombre                  String
   email                   String         @unique
-  passwordHash            String
+  passwordHash            String?
+  googleId                String?        @unique
+  foto                    String?
+  provider                String         @default("email")
+  emailVerified           Boolean        @default(false)
+  verificationToken       String?        @unique
+  verificationTokenExpiry DateTime?
   rol                     Rol            @default(USUARIO)
   fechaRegistro           DateTime       @default(now())
   activo                  Boolean        @default(true)

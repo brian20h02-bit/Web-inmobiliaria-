@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 
@@ -10,10 +11,14 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [unverifiedEmail, setUnverifiedEmail] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
+  const [resendDone, setResendDone] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
+    setUnverifiedEmail('')
 
     if (!email || !password) {
       setError('Por favor completá todos los campos.')
@@ -25,10 +30,42 @@ export default function Login() {
       const res = await api.post('/auth/login', { email, password })
       login(res.data.token)
       navigate('/')
-    } catch {
-      setError('Credenciales incorrectas. Verificá tu email y contraseña.')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string; code?: string; email?: string } } }
+      const data = e.response?.data
+      if (data?.code === 'EMAIL_NOT_VERIFIED') {
+        setUnverifiedEmail(data.email || email)
+        setError(data.error || 'Debes verificar tu email antes de continuar')
+      } else {
+        setError(data?.error || 'Credenciales incorrectas. Verificá tu email y contraseña.')
+      }
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleResend() {
+    setResendLoading(true)
+    try {
+      await api.post('/auth/resend-verification', { email: unverifiedEmail })
+      setResendDone(true)
+    } catch {
+      setResendDone(true)
+    } finally {
+      setResendLoading(false)
+    }
+  }
+
+  async function handleGoogleSuccess(credentialResponse: { credential?: string }) {
+    if (!credentialResponse.credential) return
+    setError('')
+    try {
+      const res = await api.post('/auth/google', { credential: credentialResponse.credential })
+      login(res.data.token)
+      navigate('/')
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string } } }
+      setError(e.response?.data?.error || 'Error al iniciar sesión con Google.')
     }
   }
 
@@ -37,6 +74,23 @@ export default function Login() {
       <div className="auth-card">
         <h1 className="auth-title">Iniciar sesión</h1>
         {error && <p className="error-msg">{error}</p>}
+
+        {unverifiedEmail && !resendDone && (
+          <button
+            className="btn btn-primary btn-full"
+            onClick={handleResend}
+            disabled={resendLoading}
+            style={{ marginBottom: '12px' }}
+          >
+            {resendLoading ? 'Enviando…' : 'Reenviar email de verificación'}
+          </button>
+        )}
+        {resendDone && (
+          <p className="success-msg" style={{ marginBottom: '12px' }}>
+            Te enviamos un nuevo link. Revisá tu bandeja de entrada.
+          </p>
+        )}
+
         <form onSubmit={handleSubmit} className="form">
           <div className="form-group">
             <label htmlFor="email">Email</label>
@@ -66,6 +120,20 @@ export default function Login() {
             {loading ? 'Ingresando…' : 'Ingresar'}
           </button>
         </form>
+
+        <div className="auth-divider">
+          <span>o</span>
+        </div>
+
+        <div className="auth-google-wrap">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError('No se pudo iniciar sesión con Google.')}
+            width="100%"
+            text="signin_with"
+          />
+        </div>
+
         <p className="auth-footer">
           ¿No tenés cuenta? <Link to="/registro">Registrate</Link>
         </p>

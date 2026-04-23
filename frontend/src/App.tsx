@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider } from './context/AuthContext'
 import { ChatProvider } from './context/ChatContext'
 import { FavoritosProvider } from './context/FavoritosContext'
@@ -13,6 +14,7 @@ import Home from './pages/Home'
 import PropiedadDetalle from './pages/PropiedadDetalle'
 import Login from './pages/Login'
 import Registro from './pages/Registro'
+import VerifyEmail from './pages/VerifyEmail'
 import Dashboard from './pages/admin/Dashboard'
 import PropiedadesAdmin from './pages/admin/PropiedadesAdmin'
 import UsuariosAdmin from './pages/admin/UsuariosAdmin'
@@ -22,9 +24,12 @@ import Historial from './pages/Historial'
 import MisConsultas from './pages/MisConsultas'
 import HiloConsulta from './pages/HiloConsulta'
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+
 export default function App() {
   return (
-    <AuthProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <AuthProvider>
       <FavoritosProvider>
         <GuardadosProvider>
           <PropiedadModalProvider>
@@ -35,6 +40,7 @@ export default function App() {
                     <Route path="/" element={<Home />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/registro" element={<Registro />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
                   </Route>
 
                   <Route element={<AppLayout />}>
@@ -72,5 +78,6 @@ export default function App() {
         </GuardadosProvider>
       </FavoritosProvider>
     </AuthProvider>
+    </GoogleOAuthProvider>
   )
 }

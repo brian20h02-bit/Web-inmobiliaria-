@@ -2259,6 +2259,8 @@ button { cursor: pointer; border: none; background: none; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-actions { display: flex; gap: 8px; }
 .field-error { font-size: 0.8rem; color: var(--danger); }
+.password-rules { list-style: none; padding: 0; margin: 6px 0 0; display: flex; flex-direction: column; gap: 3px; }
+.password-rules li { font-size: 0.8rem; display: flex; align-items: center; gap: 5px; transition: color 0.2s; }
 
 /* ===== AUTH ===== */
 .auth-page { display: flex; align-items: center; justify-content: center; min-height: calc(100vh - var(--header-h) - 80px); }
@@ -2266,6 +2268,9 @@ button { cursor: pointer; border: none; background: none; }
 .auth-title { font-size: var(--type-title-md); font-weight: 700; letter-spacing: -0.4px; margin-bottom: 24px; }
 .auth-footer { margin-top: 16px; font-size: 0.875rem; text-align: center; color: var(--text-muted); }
 .auth-footer a { color: var(--primary); font-weight: 500; }
+.auth-divider { display: flex; align-items: center; gap: 10px; margin: 20px 0 16px; color: var(--text-muted); font-size: 0.8rem; }
+.auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.auth-google-wrap { display: flex; justify-content: center; margin-bottom: 4px; }
 
 /* ===== MESSAGES ===== */
 .error-msg { color: var(--danger); font-size: 0.875rem; padding: 10px 12px; background: #fdf0ef; border-radius: var(--radius); border: 1px solid #f5c6c2; }
