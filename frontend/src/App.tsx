@@ -6,10 +6,12 @@ import { FavoritosProvider } from './context/FavoritosContext'
 import { GuardadosProvider } from './context/GuardadosContext'
 import { PropiedadModalProvider } from './context/PropiedadModalContext'
 import PropiedadModal from './components/PropiedadModal'
+import ErrorBoundary from './components/ErrorBoundary'
 import Layout from './components/Layout'
 import LegalLayout from './components/LegalLayout'
 import AppLayout from './components/AppLayout'
 import ProtectedRoute from './components/ProtectedRoute'
+import NotFound from './pages/NotFound'
 
 import Home from './pages/Home'
 import PropiedadDetalle from './pages/PropiedadDetalle'
@@ -38,7 +40,7 @@ export default function App() {
         <GuardadosProvider>
           <PropiedadModalProvider>
             <ChatProvider>
-              <>
+              <ErrorBoundary>
                 <Routes>
                   <Route path="/login" element={<Login />} />
                   <Route path="/registro" element={<Registro />} />
@@ -81,9 +83,11 @@ export default function App() {
                       <ProtectedRoute><HiloConsulta /></ProtectedRoute>
                     } />
                   </Route>
+
+                  <Route path="*" element={<NotFound />} />
                 </Routes>
                 <PropiedadModal />
-              </>
+              </ErrorBoundary>
             </ChatProvider>
           </PropiedadModalProvider>
         </GuardadosProvider>

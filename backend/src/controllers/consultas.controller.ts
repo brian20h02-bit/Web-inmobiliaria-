@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma';
 
+const isDev = process.env.NODE_ENV !== 'production'
+
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 const crearSchema = z.object({
@@ -37,7 +39,7 @@ export async function crear(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    console.log(`[crear] Consulta en propiedad "${propiedad.titulo}" (ID:${propiedadId}) | Admin: ${propiedad.administrador.email} | Usuario: ${usuarioId}`);
+    isDev && console.log(`[crear] Consulta en propiedad "${propiedad.titulo}" (ID:${propiedadId}) | Admin: ${propiedad.administrador.email} | Usuario: ${usuarioId}`);
 
     // Crear consulta con primer mensaje
     const consulta = await prisma.consulta.create({
@@ -61,7 +63,7 @@ export async function crear(req: Request, res: Response): Promise<void> {
       },
     });
 
-    console.log(`[crear] ✅ Nueva consulta creada ID:${consulta.id} | Usuario:${usuarioId} | Propiedad:${propiedadId} | Admin:${propiedad.administradorId} | Asunto:"${asunto}"`);
+    isDev && console.log(`[crear] ✅ Nueva consulta creada ID:${consulta.id} | Usuario:${usuarioId} | Propiedad:${propiedadId} | Admin:${propiedad.administradorId} | Asunto:"${asunto}"`);
 
     res.status(201).json(consulta);
   } catch (error) {
@@ -74,7 +76,7 @@ export async function listarTodas(req: Request, res: Response): Promise<void> {
   try {
     const adminId = req.user!.id;
     
-    console.log(`[listarTodas] Admin ${adminId} solicitando sus consultas`)
+    isDev && console.log(`[listarTodas] Admin ${adminId} solicitando sus consultas`)
     
     // Admin ve SOLO las consultas sobre sus propiedades
     const consultas = await prisma.consulta.findMany({
@@ -96,7 +98,7 @@ export async function listarTodas(req: Request, res: Response): Promise<void> {
       orderBy: { fechaCreacion: 'desc' },
     });
     
-    console.log(`[listarTodas] Admin ${adminId} tiene ${consultas.length} consultas`)
+    isDev && console.log(`[listarTodas] Admin ${adminId} tiene ${consultas.length} consultas`)
     res.json(consultas);
   } catch (error) {
     console.error('[listarTodas] Error:', error)
@@ -237,7 +239,7 @@ export async function responder(req: Request, res: Response): Promise<void> {
     // Marcar como no leída para el usuario si el admin responde
     if (esAdmin) {
       updateData.leidoPorUsuario = false;
-      console.log(`[responder] Admin respondiendo consulta ${id}. Marcando como no leída para usuario.`);
+      isDev && console.log(`[responder] Admin respondiendo consulta ${id}. Marcando como no leída para usuario.`);
     }
     
     const consultaActualizada = await prisma.consulta.update({
@@ -246,7 +248,7 @@ export async function responder(req: Request, res: Response): Promise<void> {
       include: { mensajes: { orderBy: { fecha: 'asc' } } },
     });
 
-    console.log(`[responder] ✅ Respuesta agregada a consulta ${id} | Estado: ${consultaActualizada.estado}`);
+    isDev && console.log(`[responder] ✅ Respuesta agregada a consulta ${id} | Estado: ${consultaActualizada.estado}`);
 
     res.json(consultaActualizada);
   } catch {
@@ -259,7 +261,7 @@ export async function misNotificaciones(req: Request, res: Response): Promise<vo
     const usuarioId = req.user!.id;
     const esAdmin = req.user!.rol === 'ADMINISTRADOR';
 
-    console.log(`[misNotificaciones] ${esAdmin ? '👨‍💼 ADMIN' : '👤 USUARIO'} ${usuarioId} solicitando notificaciones...`)
+    isDev && console.log(`[misNotificaciones] ${esAdmin ? '👨‍💼 ADMIN' : '👤 USUARIO'} ${usuarioId} solicitando notificaciones...`)
 
     let consultas: any[];
 
@@ -313,14 +315,14 @@ export async function misNotificaciones(req: Request, res: Response): Promise<vo
       ? consultas.filter((c) => !c.leidoPorAdmin).length
       : consultas.filter((c) => !c.leidoPorUsuario).length;
 
-    console.log(`[misNotificaciones] ${esAdmin ? '👨‍💼' : '👤'} ${usuarioId} tiene ${consultas.length} consultas totales, ${noLeidasCount} sin leer`)
+    isDev && console.log(`[misNotificaciones] ${esAdmin ? '👨‍💼' : '👤'} ${usuarioId} tiene ${consultas.length} consultas totales, ${noLeidasCount} sin leer`)
     
     // Log detallado de sin leer
     if (noLeidasCount > 0) {
       const noLeidasDetalle = esAdmin 
         ? consultas.filter(c => !c.leidoPorAdmin).map(c => `"${c.asunto}"`)
         : consultas.filter(c => !c.leidoPorUsuario).map(c => `"${c.asunto}"`)
-      console.log(`   ├─ Sin leer: ${noLeidasDetalle.join(', ')}`)
+      isDev && console.log(`   ├─ Sin leer: ${noLeidasDetalle.join(', ')}`)
     }
 
     res.json({ consultas, noLeidasCount });
@@ -334,7 +336,7 @@ export async function obtenerNotificaciones(req: Request, res: Response): Promis
   try {
     const adminId = req.user!.id;
     
-    console.log(`[obtenerNotificaciones] Admin ${adminId} solicitando notificaciones`)
+    isDev && console.log(`[obtenerNotificaciones] Admin ${adminId} solicitando notificaciones`)
     
     // Admin ve SOLO las consultas SIN LEER sobre sus propiedades
     const consultas = await prisma.consulta.findMany({
@@ -357,7 +359,7 @@ export async function obtenerNotificaciones(req: Request, res: Response): Promis
       orderBy: { fechaCreacion: 'desc' },
     });
 
-    console.log(`[obtenerNotificaciones] Admin ${adminId} tiene ${consultas.length} consultas sin leer`)
+    isDev && console.log(`[obtenerNotificaciones] Admin ${adminId} tiene ${consultas.length} consultas sin leer`)
     res.json({ consultas, noLeidasCount: consultas.length });
   } catch (error) {
     console.error('[obtenerNotificaciones] Error:', error)
@@ -393,7 +395,7 @@ export async function contarNotificacionesPorPropiedad(req: Request, res: Respon
         noLeidasCount: p._count.consultas
       }));
 
-      console.log(`[contarNotificacionesPorPropiedad] Admin ${userId} tiene ${resultado.reduce((sum, p) => sum + p.noLeidasCount, 0)} consultas sin leer`);
+      isDev && console.log(`[contarNotificacionesPorPropiedad] Admin ${userId} tiene ${resultado.reduce((sum, p) => sum + p.noLeidasCount, 0)} consultas sin leer`);
       res.json(resultado);
     } else {
       // Usuario ve conteo de respuestas sin leer por propiedad
@@ -422,7 +424,7 @@ export async function contarNotificacionesPorPropiedad(req: Request, res: Respon
           noLeidasCount: p._count.consultas
         }));
 
-      console.log(`[contarNotificacionesPorPropiedad] Usuario ${userId} tiene ${resultado.reduce((sum, p) => sum + p.noLeidasCount, 0)} respuestas sin leer`);
+      isDev && console.log(`[contarNotificacionesPorPropiedad] Usuario ${userId} tiene ${resultado.reduce((sum, p) => sum + p.noLeidasCount, 0)} respuestas sin leer`);
       res.json(resultado);
     }
   } catch (error) {
@@ -437,7 +439,7 @@ export async function marcarComoLeida(req: Request, res: Response): Promise<void
     const userId = req.user!.id;
     const esAdmin = req.user!.rol === 'ADMINISTRADOR';
 
-    console.log(`[marcarComoLeida] ID: ${id}, User: ${userId}, EsAdmin: ${esAdmin}`)
+    isDev && console.log(`[marcarComoLeida] ID: ${id}, User: ${userId}, EsAdmin: ${esAdmin}`)
 
     // Verificar que la consulta existe y obtener datos
     const consulta = await prisma.consulta.findUnique({
@@ -449,31 +451,31 @@ export async function marcarComoLeida(req: Request, res: Response): Promise<void
     });
 
     if (!consulta) {
-      console.log(`[marcarComoLeida] Consulta ${id} no encontrada`)
+      isDev && console.log(`[marcarComoLeida] Consulta ${id} no encontrada`)
       res.status(404).json({ error: 'Consulta no encontrada' });
       return;
     }
 
-    console.log(`[marcarComoLeida] Consulta encontrada. UsuarioId: ${consulta.usuarioId}, AdminId: ${consulta.propiedad.administradorId}`)
+    isDev && console.log(`[marcarComoLeida] Consulta encontrada. UsuarioId: ${consulta.usuarioId}, AdminId: ${consulta.propiedad.administradorId}`)
 
     // Validar permisos
     if (esAdmin) {
       // Admin solo puede marcar sus propias consultas
       if (consulta.propiedad.administradorId !== userId) {
-        console.log(`[marcarComoLeida] Admin ${userId} intenta marcar consulta de admin ${consulta.propiedad.administradorId} - DENEGADO`)
+        isDev && console.log(`[marcarComoLeida] Admin ${userId} intenta marcar consulta de admin ${consulta.propiedad.administradorId} - DENEGADO`)
         res.status(403).json({ error: 'No tienes permiso sobre esta consulta' });
         return;
       }
     } else {
       // Usuario solo puede marcar sus propias consultas
       if (consulta.usuarioId !== userId) {
-        console.log(`[marcarComoLeida] Usuario ${userId} intenta marcar consulta de usuario ${consulta.usuarioId} - DENEGADO`)
+        isDev && console.log(`[marcarComoLeida] Usuario ${userId} intenta marcar consulta de usuario ${consulta.usuarioId} - DENEGADO`)
         res.status(403).json({ error: 'No tienes permiso para realizar esta acción' });
         return;
       }
     }
 
-    console.log(`[marcarComoLeida] Validación pasada. Marcando como leída...`)
+    isDev && console.log(`[marcarComoLeida] Validación pasada. Marcando como leída...`)
 
     // Preparar los datos a actualizar
     const updateData: any = {};
@@ -500,7 +502,7 @@ export async function marcarComoLeida(req: Request, res: Response): Promise<void
       },
     });
 
-    console.log(`[marcarComoLeida] Consulta ${id} marcada correctamente`)
+    isDev && console.log(`[marcarComoLeida] Consulta ${id} marcada correctamente`)
     res.json(consultaActualizada);
   } catch (error: any) {
     console.error(`[marcarComoLeida] Error:`, error)

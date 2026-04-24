@@ -5,6 +5,11 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ El seed no debe ejecutarse en producción. Abortando.')
+    process.exit(1)
+  }
+
   const passwordHash = await bcrypt.hash('Admin1234!', 12);
 
   // Crear usuario administrador

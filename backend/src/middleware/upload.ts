@@ -2,4 +2,7 @@ import multer from 'multer'
 
 const storage = multer.memoryStorage()
 
-export const upload = multer({ storage }).array('imagenes', 10)
+export const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB por archivo
+}).array('imagenes', 20)

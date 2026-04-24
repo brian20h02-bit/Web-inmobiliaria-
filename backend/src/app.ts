@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import authRouter from './routes/auth';
 import propiedadesRouter from './routes/propiedades';
 import consultasRouter from './routes/consultas';
@@ -51,9 +52,21 @@ app.use(
   })
 );
 
-// ── Parser con límite aumentado para imágenes en base64 ──────────────────────
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// ── Rate limiting — auth endpoints ──────────────────────────────────────────
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 15,
+  message: { error: 'Demasiados intentos. Intentá en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+app.use('/api/auth/login', authLimiter)
+app.use('/api/auth/registro', authLimiter)
+app.use('/api/auth/resend-verification', authLimiter)
+
+// ── Parsers ───────────────────────────────────────────────────────────────────
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ limit: '5mb', extended: true }));
 
 // ── Rutas ─────────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter);
@@ -65,6 +78,11 @@ app.use('/api/usuario', usuarioRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok' });
+});
+
+// ── 404 handler ───────────────────────────────────────────────────────────────
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({ error: 'Recurso no encontrado' });
 });
 
 export default app;

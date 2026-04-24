@@ -5,6 +5,28 @@ import prisma from '../lib/prisma';
 import cloudinary from '../lib/cloudinary';
 import { TipoPropiedad } from '@prisma/client';
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Coerce FormData string values to number; returns null for empty/absent values
+function toNum(v: unknown): number | null {
+  if (v === '' || v == null || v === 'null' || v === 'undefined') return null
+  const n = Number(v)
+  return isNaN(n) ? null : n
+}
+
+// Upload a file Buffer to Cloudinary
+function uploadBuffer(buffer: Buffer): Promise<string> {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      { folder: 'inmobiliaria/propiedades', resource_type: 'auto', quality: 'auto' },
+      (err, result) => {
+        if (err || !result) reject(err ?? new Error('Cloudinary upload failed'))
+        else resolve(result.secure_url)
+      }
+    ).end(buffer)
+  })
+}
+
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 const crearPropiedadSchema = z.object({
@@ -22,9 +44,7 @@ const crearPropiedadSchema = z.object({
   lat: z.number().optional().nullable(),
   lng: z.number().optional().nullable(),
   houseTourUrl: z.string().optional().nullable(),
-  imagenBase64: z.string().optional(),
-  imagenesBase64: z.array(z.string()).optional(),
-  imagenes: z.array(z.string()).default([]),
+  existingImagenes: z.array(z.string()).default([]),
 });
 
 const actualizarPropiedadSchema = crearPropiedadSchema.partial();
@@ -168,67 +188,46 @@ export async function obtenerDetalle(req: Request, res: Response): Promise<void>
 
 export async function crear(req: Request, res: Response): Promise<void> {
   try {
-    const parsed = crearPropiedadSchema.safeParse(req.body);
+    const files = (req.files as Express.Multer.File[]) ?? []
+    const raw = req.body
+
+    // Coerce FormData string values to proper types before validation
+    const bodyParsed = {
+      ...raw,
+      precio: toNum(raw.precio),
+      expensas: toNum(raw.expensas),
+      metrosCuadrados: toNum(raw.metrosCuadrados),
+      ambientes: toNum(raw.ambientes),
+      banos: toNum(raw.banos),
+      lat: toNum(raw.lat),
+      lng: toNum(raw.lng),
+      existingImagenes: raw.existingImagenes == null
+        ? []
+        : Array.isArray(raw.existingImagenes) ? raw.existingImagenes : [raw.existingImagenes],
+    }
+
+    const parsed = crearPropiedadSchema.safeParse(bodyParsed)
     if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.errors[0].message });
-      return;
+      res.status(400).json({ error: parsed.error.errors[0].message })
+      return
     }
 
-    const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, contacto, lat, lng, houseTourUrl, imagenBase64, imagenesBase64, imagenes } = parsed.data;
-    const administradorId = req.user!.id;
+    const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, contacto, lat, lng, houseTourUrl } = parsed.data
+    const administradorId = req.user!.id
 
-    console.log('📝 Crear propiedad - Usuario:', {
-      userId: administradorId,
-      email: req.user?.email,
-      rol: req.user?.rol,
-      titulo,
-    });
-
-    // Verificar que el usuario existe en la BD
-    const usuarioExiste = await prisma.usuario.findUnique({
-      where: { id: administradorId },
-    });
-
-    if (!usuarioExiste) {
-      console.error('❌ Usuario no encontrado en BD:', administradorId);
-      res.status(401).json({ error: 'Usuario no encontrado. Por favor inicia sesión nuevamente.' });
-      return;
-    }
-
-    if (usuarioExiste.rol !== 'ADMINISTRADOR') {
-      console.error('❌ Usuario no es administrador:', administradorId);
-      res.status(403).json({ error: 'Solo los administradores pueden crear propiedades.' });
-      return;
-    }
-
-    // Procesar imágenes base64 con Cloudinary
-    let imagenesFinales: string[] = imagenes || [];
-    const allBase64 = [
-      ...(imagenBase64 ? [imagenBase64] : []),
-      ...(imagenesBase64 || []),
-    ];
-    if (allBase64.length > 0) {
+    // Upload new files to Cloudinary
+    let imagenesFinales: string[] = []
+    if (files.length > 0) {
+      if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+        res.status(400).json({ error: 'Cloudinary no está configurado. Contacta al administrador.' })
+        return
+      }
       try {
-        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-          res.status(400).json({ error: 'Cloudinary no está configurado. Contacta al administrador.' });
-          return;
-        }
-
-        console.log(`Subiendo ${allBase64.length} imagen(es) a Cloudinary para:`, titulo);
-        for (const b64 of allBase64) {
-          const uploadResult = await cloudinary.uploader.upload(b64, {
-            folder: 'inmobiliaria/propiedades',
-            resource_type: 'auto',
-            quality: 'auto',
-          });
-          imagenesFinales.push(uploadResult.secure_url);
-          console.log('Imagen subida exitosamente:', uploadResult.secure_url);
-        }
+        imagenesFinales = await Promise.all(files.map(f => uploadBuffer(f.buffer)))
       } catch (uploadError: any) {
-        console.error('Error al subir imagen a Cloudinary:', uploadError);
-        const errorMessage = uploadError?.message || 'Error desconocido en Cloudinary';
-        res.status(400).json({ error: `Error al procesar la imagen: ${errorMessage}` });
-        return;
+        console.error('Error al subir imagen a Cloudinary:', uploadError)
+        res.status(400).json({ error: `Error al procesar la imagen: ${uploadError?.message ?? 'Error desconocido'}` })
+        return
       }
     }
 
@@ -252,102 +251,91 @@ export async function crear(req: Request, res: Response): Promise<void> {
         administradorId,
       },
       include: {
-        administrador: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
+        administrador: { select: { id: true, nombre: true } },
       },
-    });
+    })
 
-    console.log('✅ Propiedad creada:', propiedad.id);
-    res.status(201).json(propiedad);
+    res.status(201).json(propiedad)
   } catch (error: any) {
-    console.error('❌ Error al crear propiedad:', error.message || error);
-    res.status(500).json({ error: error?.message || 'Error interno del servidor' });
+    console.error('Error al crear propiedad:', error.message || error)
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
 }
 
 export async function actualizar(req: Request, res: Response): Promise<void> {
   try {
-    const { id } = req.params;
-    const parsed = actualizarPropiedadSchema.safeParse(req.body);
+    const { id } = req.params
+    const files = (req.files as Express.Multer.File[]) ?? []
+    const raw = req.body
 
+    // Coerce FormData string values to proper types before validation
+    const bodyParsed = {
+      ...raw,
+      precio: raw.precio != null && raw.precio !== '' ? toNum(raw.precio) : undefined,
+      expensas: toNum(raw.expensas),
+      metrosCuadrados: toNum(raw.metrosCuadrados),
+      ambientes: toNum(raw.ambientes),
+      banos: toNum(raw.banos),
+      lat: toNum(raw.lat),
+      lng: toNum(raw.lng),
+      existingImagenes: raw.existingImagenes == null
+        ? []
+        : Array.isArray(raw.existingImagenes) ? raw.existingImagenes : [raw.existingImagenes],
+    }
+
+    const parsed = actualizarPropiedadSchema.safeParse(bodyParsed)
     if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.errors[0].message });
-      return;
+      res.status(400).json({ error: parsed.error.errors[0].message })
+      return
     }
 
     // Verificar que la propiedad exista y pertenezca al usuario
-    const propiedadExistente = await prisma.propiedad.findUnique({
-      where: { id },
-    });
-
+    const propiedadExistente = await prisma.propiedad.findUnique({ where: { id } })
     if (!propiedadExistente) {
-      res.status(404).json({ error: 'Propiedad no encontrada' });
-      return;
+      res.status(404).json({ error: 'Propiedad no encontrada' })
+      return
     }
-
     if (propiedadExistente.administradorId !== req.user!.id) {
-      res.status(403).json({ error: 'No tienes permiso para actualizar esta propiedad' });
-      return;
+      res.status(403).json({ error: 'No tienes permiso para actualizar esta propiedad' })
+      return
     }
 
-    const { imagenesBase64, imagenBase64, precio, expensas, houseTourUrl: houseTourUrlUpd, ...rest } = parsed.data;
-
-    // Process new base64 images if any
-    let imagenesFinales: string[] | undefined = rest.imagenes;
-    const allBase64 = [
-      ...(imagenBase64 ? [imagenBase64] : []),
-      ...(imagenesBase64 || []),
-    ];
-    if (allBase64.length > 0) {
+    // Upload new files, merge with existing image URLs
+    const existingImagenes = parsed.data.existingImagenes ?? []
+    let newImageUrls: string[] = []
+    if (files.length > 0) {
+      if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+        res.status(400).json({ error: 'Cloudinary no está configurado.' })
+        return
+      }
       try {
-        if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-          res.status(400).json({ error: 'Cloudinary no está configurado.' });
-          return;
-        }
-        const existing = imagenesFinales || [];
-        for (const b64 of allBase64) {
-          const uploadResult = await cloudinary.uploader.upload(b64, {
-            folder: 'inmobiliaria/propiedades',
-            resource_type: 'auto',
-            quality: 'auto',
-          });
-          existing.push(uploadResult.secure_url);
-        }
-        imagenesFinales = existing;
+        newImageUrls = await Promise.all(files.map(f => uploadBuffer(f.buffer)))
       } catch (uploadError: any) {
-        console.error('Error al subir imagen a Cloudinary:', uploadError);
-        res.status(400).json({ error: `Error al procesar la imagen: ${uploadError?.message || 'Error desconocido'}` });
-        return;
+        console.error('Error al subir imagen a Cloudinary:', uploadError)
+        res.status(400).json({ error: `Error al procesar la imagen: ${uploadError?.message ?? 'Error desconocido'}` })
+        return
       }
     }
+    const imagenesFinales = [...existingImagenes, ...newImageUrls]
 
-    const updateData: Record<string, unknown> = { ...rest };
-    if (imagenesFinales !== undefined) updateData.imagenes = imagenesFinales;
-    if (precio !== undefined) updateData.precio = new Decimal(precio);
-    if (expensas !== undefined) updateData.expensas = expensas !== null ? new Decimal(expensas) : null;
-    if (houseTourUrlUpd !== undefined) updateData.houseTourUrl = houseTourUrlUpd ?? null;
+    const { existingImagenes: _ei, precio, expensas, houseTourUrl, ...rest } = parsed.data
+    const updateData: Record<string, unknown> = { ...rest, imagenes: imagenesFinales }
+    if (precio !== undefined) updateData.precio = new Decimal(precio)
+    if (expensas !== undefined) updateData.expensas = expensas !== null ? new Decimal(expensas) : null
+    if (houseTourUrl !== undefined) updateData.houseTourUrl = houseTourUrl ?? null
 
     const propiedad = await prisma.propiedad.update({
       where: { id },
       data: updateData,
       include: {
-        administrador: {
-          select: {
-            id: true,
-            nombre: true,
-          },
-        },
+        administrador: { select: { id: true, nombre: true } },
       },
-    });
+    })
 
-    res.json(propiedad);
+    res.json(propiedad)
   } catch (error) {
-    console.error('Error al actualizar propiedad:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    console.error('Error al actualizar propiedad:', error)
+    res.status(500).json({ error: 'Error interno del servidor' })
   }
 }
 
@@ -414,31 +402,6 @@ export async function destacar(req: Request, res: Response): Promise<void> {
     res.json(propiedad);
   } catch (error) {
     console.error('Error al destacar propiedad:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-}
-
-export async function debugPropiedades(req: Request, res: Response): Promise<void> {
-  try {
-    const propiedades = await prisma.propiedad.findMany({
-      select: {
-        id: true,
-        titulo: true,
-        administrador: {
-          select: {
-            email: true,
-            id: true,
-          },
-        },
-      },
-      orderBy: {
-        titulo: 'asc',
-      },
-    });
-
-    res.json(propiedades);
-  } catch (error) {
-    console.error('Error en debugPropiedades:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 }

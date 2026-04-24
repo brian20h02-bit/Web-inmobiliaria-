@@ -2,7 +2,6 @@ import { useState, useEffect, FormEvent } from 'react'
 import api from '../../lib/api'
 
 interface Propiedad {
-  id: string
   titulo: string
   descripcionPublica?: string
   tipo: string
@@ -17,29 +16,6 @@ interface Propiedad {
   destacada: boolean
   imagenes: string[]
   houseTourUrl?: string | null
-}
-
-function compressImage(file: File): Promise<string> {
-  return new Promise((resolve) => {
-    const canvas = document.createElement('canvas')
-    const img = new Image()
-    img.onload = () => {
-      let width = img.width
-      let height = img.height
-      const maxWidth = 1920
-      const maxHeight = 1440
-      if (width > height) {
-        if (width > maxWidth) { height = Math.round((height * maxWidth) / width); width = maxWidth }
-      } else {
-        if (height > maxHeight) { width = Math.round((width * maxHeight) / height); height = maxHeight }
-      }
-      canvas.width = width
-      canvas.height = height
-      canvas.getContext('2d')?.drawImage(img, 0, 0, width, height)
-      resolve(canvas.toDataURL('image/jpeg', 0.7))
-    }
-    img.src = URL.createObjectURL(file)
-  })
 }
 
 export default function PropiedadesAdmin() {
@@ -174,37 +150,39 @@ export default function PropiedadesAdmin() {
 
     setSaving(true)
     try {
-      const imagenesBase64: string[] = []
-      for (const file of imageFiles) {
-        imagenesBase64.push(await compressImage(file))
-      }
-
       const ambientesVal = ambientesMode === 'mono' ? 0 : (ambientes ? parseInt(ambientes) : undefined)
 
-      const body = {
-        titulo,
-        descripcionPublica: descripcion,
-        descripcionPrivada: descripcion,
-        tipo,
-        precio: parseFloat(precio),
-        expensas: tipo === 'ALQUILER' && expensas ? parseFloat(expensas) : null,
-        ubicacion,
-        metrosCuadrados: metrosCuadrados ? parseInt(metrosCuadrados) : null,
-        ambientes: ambientesVal ?? null,
-        banos: banos ? parseInt(banos) : null,
-        contacto,
-        lat: lat ? parseFloat(lat) : null,
-        lng: lng ? parseFloat(lng) : null,
-        houseTourUrl: houseTourUrl.trim() || null,
-        imagenesBase64,
-        imagenes: editingId ? existingImages : undefined,
+      const formData = new FormData()
+      formData.append('titulo', titulo)
+      formData.append('descripcionPublica', descripcion)
+      formData.append('descripcionPrivada', descripcion)
+      formData.append('tipo', tipo)
+      formData.append('precio', precio)
+      if (tipo === 'ALQUILER' && expensas) formData.append('expensas', expensas)
+      formData.append('ubicacion', ubicacion)
+      if (metrosCuadrados) formData.append('metrosCuadrados', metrosCuadrados)
+      if (ambientesVal !== undefined) formData.append('ambientes', String(ambientesVal))
+      if (banos) formData.append('banos', banos)
+      formData.append('contacto', contacto)
+      if (lat) formData.append('lat', lat)
+      if (lng) formData.append('lng', lng)
+      if (houseTourUrl.trim()) formData.append('houseTourUrl', houseTourUrl.trim())
+
+      // New image files
+      for (const file of imageFiles) {
+        formData.append('imagenes', file)
+      }
+
+      // Existing image URLs (edit mode)
+      if (editingId) {
+        existingImages.forEach(url => formData.append('existingImagenes', url))
       }
 
       if (editingId) {
-        await api.put(`/propiedades/${editingId}`, body)
+        await api.put(`/propiedades/${editingId}`, formData)
         setSuccess('¡Propiedad actualizada correctamente!')
       } else {
-        await api.post('/propiedades', body)
+        await api.post('/propiedades', formData)
         setSuccess('¡Propiedad publicada correctamente!')
       }
       resetForm()

@@ -9,6 +9,6 @@ router.post('/login', login);
 router.get('/verify-email', verifyEmail);
 router.post('/resend-verification', resendVerification);
 router.post('/google', googleAuth);
-router.delete('/cuenta', authenticate, deleteAccount);
+router.delete('/cuenta', authenticate, requireAuth, deleteAccount);
 
 export default router;
