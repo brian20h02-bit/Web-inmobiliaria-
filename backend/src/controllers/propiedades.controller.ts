@@ -508,26 +508,6 @@ export async function eliminarDeHistorial(req: Request, res: Response): Promise<
   }
 }
 
-export async function eliminarDeHistorial(req: Request, res: Response): Promise<void> {
-  try {
-    if (!req.user) { res.status(401).json({ error: 'No autenticado' }); return; }
-    const { propId } = req.params;
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: req.user.id },
-      select: { historial: true },
-    });
-    const historial = (usuario?.historial as Array<{ id: string; ts: number }>) || [];
-    const updated = historial.filter((h) => h.id !== propId);
-    await prisma.usuario.update({
-      where: { id: req.user.id },
-      data: { historial: updated },
-    });
-    res.json({ ok: true });
-  } catch (error) {
-    res.status(500).json({ error: 'Error interno del servidor' });
-  }
-}
-
 export async function limpiarHistorial(req: Request, res: Response): Promise<void> {
   try {
     if (!req.user) { res.status(401).json({ error: 'No autenticado' }); return; }
