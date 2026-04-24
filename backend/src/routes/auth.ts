@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { registro, login, verifyEmail, resendVerification, googleAuth, deleteAccount } from '../controllers/auth.controller';
-import { authenticate } from '../middleware/auth.middleware';
+import { authenticate, requireAuth } from '../middleware/auth.middleware';
 
 const router = Router();
 
