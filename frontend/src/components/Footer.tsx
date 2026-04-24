@@ -19,7 +19,7 @@ export default function Footer() {
         {/* ── Col 1: Brand ── */}
         <div className="footer-v2-brand">
           <img src="/logo-simple.png" alt="PaolaVCastillo" className="footer-v2-logo" />
-          <p className="footer-v2-tagline">Asesora de confianza.<br />Tu próxima propiedad, aquí.</p>
+          <p className="footer-v2-tagline">Tu Asesora de confianza.<br />Tu próxima propiedad, aquí.</p>
         </div>
 
         {/* ── Col 2: Legal links ── */}
