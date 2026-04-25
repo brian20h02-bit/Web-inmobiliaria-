@@ -265,9 +265,10 @@ export default function UserMenu({ email, onLogout, isAdmin = false }: UserMenuP
   }
 
   // ── Shared property list renderer ─────────────────────────────────
-  function PropList({ items, onRemove, emptyIcon, emptyText }: {
+  function PropList({ items, onRemove, onItemClick: _onItemClick, emptyIcon, emptyText }: {
     items: typeof favoritos
     onRemove: (p: typeof favoritos[0]) => void
+    onItemClick?: (id: string) => void
     emptyIcon: string
     emptyText: string
   }) {

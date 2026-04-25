@@ -2,6 +2,7 @@ import { useState, useEffect, FormEvent } from 'react'
 import api from '../../lib/api'
 
 interface Propiedad {
+  id: string
   titulo: string
   descripcionPublica?: string
   tipo: string
