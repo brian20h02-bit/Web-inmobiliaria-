@@ -42,13 +42,24 @@ app.use(
 );
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-const corsOrigin = process.env.CORS_ORIGIN ?? '*';
+const allowedOrigins: string[] = (process.env.CORS_ORIGIN ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: corsOrigin,
+    origin: (origin, callback) => {
+      // Permitir requests sin origin (Postman, llamadas server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error(`Origin no permitido por CORS: ${origin}`));
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: corsOrigin !== '*',
+    credentials: true,
   })
 );
 
