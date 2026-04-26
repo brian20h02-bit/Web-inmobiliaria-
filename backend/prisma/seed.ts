@@ -1,30 +1,37 @@
 import { PrismaClient } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
-import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('❌ El seed no debe ejecutarse en producción. Abortando.')
-    process.exit(1)
+  // ── Admin seed (corre en todos los entornos) ──────────────────────────────
+  const adminEmail = process.env.ADMIN_EMAIL;
+  if (adminEmail) {
+    await prisma.usuario.upsert({
+      where: { email: adminEmail },
+      update: { rol: 'ADMINISTRADOR', activo: true, emailVerified: true },
+      create: {
+        nombre: 'Administrador',
+        email: adminEmail,
+        rol: 'ADMINISTRADOR',
+        activo: true,
+        emailVerified: true,
+      },
+    });
+    console.log('✅ Usuario administrador asegurado:', adminEmail);
+  } else {
+    console.log('⚠️  ADMIN_EMAIL no definido, se omite seed de admin.');
   }
 
-  const passwordHash = await bcrypt.hash('Admin1234!', 12);
+  // ── Datos de ejemplo (solo en desarrollo) ─────────────────────────────────
+  if (process.env.NODE_ENV === 'production') {
+    console.log('ℹ️  Entorno de producción: se omite seed de datos de ejemplo.');
+    return;
+  }
 
-  // Crear usuario administrador
-  const admin = await prisma.usuario.upsert({
-    where: { email: 'admin@inmobiliaria.com' },
-    update: { passwordHash, rol: 'ADMINISTRADOR', activo: true },
-    create: {
-      nombre: 'Administrador',
-      email: 'admin@inmobiliaria.com',
-      passwordHash,
-      rol: 'ADMINISTRADOR',
-    },
-  });
-
-  console.log('✅ Usuario administrador creado/actualizado.');
+  // Obtener el admin para asignarlo como dueño de las propiedades de ejemplo
+  const adminEmail = process.env.ADMIN_EMAIL ?? 'paolavcastilloinm@gmail.com';
+  const admin = await prisma.usuario.findUniqueOrThrow({ where: { email: adminEmail } });
 
   // Crear propiedades de ejemplo
   const propiedadesEjemplo = [

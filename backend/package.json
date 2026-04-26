@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "ts-node --transpile-only src/index.ts",
     "build": "prisma generate && tsc",
-    "start": "prisma migrate deploy && node dist/index.js",
+    "start": "prisma migrate deploy && prisma db seed && node dist/index.js",
     "lint": "eslint src",
     "test": "vitest run",
     "test:watch": "vitest",
