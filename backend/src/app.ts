@@ -47,21 +47,23 @@ const allowedOrigins: string[] = (process.env.CORS_ORIGIN ?? '')
   .map((o) => o.trim())
   .filter(Boolean);
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Permitir requests sin origin (Postman, llamadas server-to-server)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      callback(new Error(`Origin no permitido por CORS: ${origin}`));
-    },
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  })
-);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Permitir requests sin origin (Postman, llamadas server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`Origin no permitido por CORS: ${origin}`));
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+};
+
+// Responder preflight OPTIONS antes que cualquier otro middleware
+app.options('*', cors(corsOptions));
+app.use(cors(corsOptions));
 
 // ── Rate limiting — auth endpoints ──────────────────────────────────────────
 const authLimiter = rateLimit({
