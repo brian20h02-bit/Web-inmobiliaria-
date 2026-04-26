@@ -5,33 +5,33 @@ const prisma = new PrismaClient();
 
 async function main() {
   // ── Admin seed (corre en todos los entornos) ──────────────────────────────
-  const adminEmail = process.env.ADMIN_EMAIL;
-  if (adminEmail) {
-    await prisma.usuario.upsert({
-      where: { email: adminEmail },
-      update: { rol: 'ADMINISTRADOR', activo: true, emailVerified: true },
-      create: {
-        nombre: 'Administrador',
-        email: adminEmail,
-        rol: 'ADMINISTRADOR',
-        activo: true,
-        emailVerified: true,
-      },
-    });
-    console.log('✅ Usuario administrador asegurado:', adminEmail);
-  } else {
-    console.log('⚠️  ADMIN_EMAIL no definido, se omite seed de admin.');
-  }
+  const adminEmail = process.env.ADMIN_EMAIL ?? "paolavcastilloinm@gmail.com";
 
-  // ── Datos de ejemplo (solo en desarrollo) ─────────────────────────────────
-  if (process.env.NODE_ENV === 'production') {
-    console.log('ℹ️  Entorno de producción: se omite seed de datos de ejemplo.');
+  // Crear / asegurar admin
+  await prisma.usuario.upsert({
+    where: { email: adminEmail },
+    update: { rol: "ADMINISTRADOR", activo: true, emailVerified: true },
+    create: {
+      nombre: "Administrador",
+      email: adminEmail,
+      rol: "ADMINISTRADOR",
+      activo: true,
+      emailVerified: true,
+    },
+  });
+
+  console.log("✅ Admin asegurado:", adminEmail);
+
+  // 🚫 En producción no cargamos datos fake
+  if (process.env.NODE_ENV === "production") {
+    console.log("ℹ️ Producción: no se cargan propiedades de ejemplo");
     return;
   }
 
-  // Obtener el admin para asignarlo como dueño de las propiedades de ejemplo
-  const adminEmail = process.env.ADMIN_EMAIL ?? 'paolavcastilloinm@gmail.com';
-  const admin = await prisma.usuario.findUniqueOrThrow({ where: { email: adminEmail } });
+  // Obtener admin para asignarlo como dueño de las propiedades de ejemplo
+  const admin = await prisma.usuario.findUniqueOrThrow({
+    where: { email: adminEmail },
+  });
 
   // Crear propiedades de ejemplo
   const propiedadesEjemplo = [
