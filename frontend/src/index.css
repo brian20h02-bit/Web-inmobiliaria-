@@ -3961,6 +3961,7 @@ button { cursor: pointer; border: none; background: none; }
   .pd-fixed-user { top: 12px; right: 14px; }
   .pd-sticky-filters { padding: 8px 14px; }
   .pd-sticky-filters .ff-bar-wrap { max-width: calc(100vw - 28px); }
+  .pd-sticky-filters--detail { display: none; }
 }
 
 /* -- Loading / Error -------------------------------------------- */

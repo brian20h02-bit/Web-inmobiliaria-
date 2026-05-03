@@ -56,7 +56,7 @@ export default function PropertyHeader() {
       </div>
 
       {/* ── Filtros sticky centrados ── */}
-      <div className="pd-sticky-filters">
+      <div className={`pd-sticky-filters${!showBack ? ' pd-sticky-filters--detail' : ''}`}>
         <FiltrosFlotantes filtros={filtros} onChange={handleFiltrosChange} />
       </div>
 
