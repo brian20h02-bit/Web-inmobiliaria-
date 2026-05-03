@@ -30,8 +30,10 @@ app.use(
       directives: {
         defaultSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
-        scriptSrc: ["'self'"],
-      },
+        scriptSrc: ["'self'"],        objectSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],      },
     },
     hsts: {
       maxAge: 31536000,
@@ -65,7 +67,18 @@ const corsOptions: cors.CorsOptions = {
 app.options('*', cors(corsOptions));
 app.use(cors(corsOptions));
 
-// ── Rate limiting — auth endpoints ──────────────────────────────────────────
+// ── Rate limiting ─────────────────────────────────────────────────────
+// Global: 120 req/min por IP sobre todo /api
+const globalLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 120,
+  message: { error: 'Demasiadas solicitudes. Intentá en 1 minuto.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+app.use('/api', globalLimiter)
+
+// Auth endpoints sensibles: 15 req / 15 min
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 15,
@@ -75,7 +88,18 @@ const authLimiter = rateLimit({
 })
 app.use('/api/auth/login', authLimiter)
 app.use('/api/auth/registro', authLimiter)
+app.use('/api/auth/google', authLimiter)
 app.use('/api/auth/resend-verification', authLimiter)
+
+// Consultas (formulario de contacto): 20 por hora por IP
+const consultasLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  message: { error: 'Límite de consultas alcanzado. Intentá en 1 hora.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+app.use('/api/consultas', consultasLimiter)
 
 // ── Parsers ───────────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '5mb' }));

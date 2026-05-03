@@ -106,6 +106,7 @@ router.post('/conversaciones/:conversacionId/mensajes', authenticate, async (req
 
     if (!userId) return res.status(401).json({ error: 'No autenticado' })
     if (!contenido?.trim()) return res.status(400).json({ error: 'Mensaje vacío' })
+    if (contenido.length > 5000) return res.status(400).json({ error: 'Mensaje demasiado largo (máx. 5000 caracteres)' })
 
     const conversacion = await prisma.conversacion.findUnique({ where: { id: conversacionId } })
     if (!conversacion) return res.status(404).json({ error: 'Conversación no encontrada' })
@@ -137,6 +138,11 @@ router.post('/conversaciones', authenticate, async (req: AuthRequest, res: Respo
     const { propiedadId, mensajeInicial } = req.body
 
     if (!userId) return res.status(401).json({ error: 'No autenticado' })
+
+    // Validate mensajeInicial if provided
+    if (mensajeInicial && mensajeInicial.trim().length > 5000) {
+      return res.status(400).json({ error: 'Mensaje inicial demasiado largo (máx. 5000 caracteres)' })
+    }
 
     const user = await prisma.usuario.findUnique({ where: { id: userId } })
     if (!user) return res.status(404).json({ error: 'Usuario no encontrado' })

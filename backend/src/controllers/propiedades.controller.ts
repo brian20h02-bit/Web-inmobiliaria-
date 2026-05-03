@@ -30,21 +30,29 @@ function uploadBuffer(buffer: Buffer): Promise<string> {
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
 const crearPropiedadSchema = z.object({
-  titulo: z.string().min(1, 'El título es requerido'),
-  descripcionPublica: z.string().min(1, 'La descripción es requerida'),
-  descripcionPrivada: z.string().optional(),
+  titulo: z.string().min(1, 'El título es requerido').max(200),
+  descripcionPublica: z.string().min(1, 'La descripción es requerida').max(5000),
+  descripcionPrivada: z.string().max(5000).optional(),
   tipo: z.enum(['VENTA', 'ALQUILER', 'OTRO']),
-  precio: z.number().positive('El precio debe ser positivo'),
-  expensas: z.number().nonnegative().optional().nullable(),
-  ubicacion: z.string().min(1, 'La ubicación es requerida'),
-  metrosCuadrados: z.number().int().positive().optional().nullable(),
-  ambientes: z.number().int().nonnegative().optional().nullable(),
-  banos: z.number().int().nonnegative().optional().nullable(),
-  contacto: z.string().min(1, 'El contacto es requerido'),
-  lat: z.number().optional().nullable(),
-  lng: z.number().optional().nullable(),
-  houseTourUrl: z.string().optional().nullable(),
-  existingImagenes: z.array(z.string()).default([]),
+  precio: z.number().positive('El precio debe ser positivo').max(1_000_000_000),
+  expensas: z.number().nonnegative().max(1_000_000_000).optional().nullable(),
+  ubicacion: z.string().min(1, 'La ubicación es requerida').max(300),
+  metrosCuadrados: z.number().int().positive().max(100_000).optional().nullable(),
+  ambientes: z.number().int().nonnegative().max(100).optional().nullable(),
+  banos: z.number().int().nonnegative().max(100).optional().nullable(),
+  contacto: z.string().min(1, 'El contacto es requerido').max(200),
+  lat: z.number().min(-90).max(90).optional().nullable(),
+  lng: z.number().min(-180).max(180).optional().nullable(),
+  houseTourUrl: z.string().url('URL de tour inválida').refine(
+    (url) => url.startsWith('https://'),
+    'Solo se permiten URLs HTTPS'
+  ).optional().nullable(),
+  existingImagenes: z.array(
+    z.string().url().refine(
+      (url) => url.startsWith('https://res.cloudinary.com/'),
+      'URL de imagen debe ser de Cloudinary'
+    )
+  ).max(20).default([]),
 });
 
 const actualizarPropiedadSchema = crearPropiedadSchema.partial();
@@ -89,8 +97,8 @@ export async function listar(req: Request, res: Response): Promise<void> {
   try {
     const tipo = (req.query.tipo as string)?.toUpperCase();
     const tipoValido = (['VENTA', 'ALQUILER', 'OTRO'] as const).find(t => t === tipo) as TipoPropiedad | undefined;
-    const pagina = parseInt(req.query.pagina as string) || 1;
-    const porPagina = parseInt(req.query.porPagina as string) || 10;
+    const pagina = Math.max(1, parseInt(req.query.pagina as string) || 1);
+    const porPagina = Math.min(Math.max(1, parseInt(req.query.porPagina as string) || 10), 50);
 
     const propiedades = await prisma.propiedad.findMany({
       where: {

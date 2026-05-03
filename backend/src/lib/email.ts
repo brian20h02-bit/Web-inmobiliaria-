@@ -10,13 +10,24 @@ const transporter = nodemailer.createTransport({
   },
 })
 
+/** Escape HTML special characters to prevent HTML injection in emails */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+}
+
 export async function sendVerificationEmail(
   email: string,
   nombre: string,
   token: string,
 ): Promise<void> {
   const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
-  const url = `${frontendUrl}/verify-email?token=${token}`
+  const url = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`
+  const safeName = escapeHtml(nombre)
 
   await transporter.sendMail({
     from: process.env.SMTP_FROM || `"Paola Castillo Inmobiliaria" <${process.env.SMTP_USER}>`,
@@ -24,7 +35,7 @@ export async function sendVerificationEmail(
     subject: 'Verificá tu cuenta — Paola Castillo Inmobiliaria',
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e5e7eb;border-radius:8px;">
-        <h2 style="color:#1e3a5f;margin-bottom:8px;">Hola ${nombre},</h2>
+        <h2 style="color:#1e3a5f;margin-bottom:8px;">Hola ${safeName},</h2>
         <p style="color:#374151;">Gracias por registrarte. Para activar tu cuenta hacé clic en el botón:</p>
         <p style="margin:24px 0;">
           <a href="${url}"

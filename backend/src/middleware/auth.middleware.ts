@@ -20,7 +20,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   const token = authHeader.slice(7);
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'inmobiliaria-secret-key-2024-min-32-chars-ok') as {
+    const payload = jwt.verify(token, process.env.JWT_SECRET ?? '') as {
       id: string;
       email: string;
       rol: string;
@@ -38,7 +38,7 @@ export function authenticateOptional(req: Request, res: Response, next: NextFunc
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     try {
-      const payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET || 'inmobiliaria-secret-key-2024-min-32-chars-ok') as {
+      const payload = jwt.verify(authHeader.slice(7), process.env.JWT_SECRET ?? '') as {
         id: string; email: string; rol: string;
       };
       req.user = { id: payload.id, email: payload.email, rol: payload.rol };

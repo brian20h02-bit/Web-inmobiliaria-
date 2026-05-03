@@ -7,18 +7,19 @@ import { OAuth2Client } from 'google-auth-library'
 import prisma from '../lib/prisma'
 import { sendVerificationEmail } from '../lib/email'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'inmobiliaria-secret-key-2024-min-32-chars-ok'
+const JWT_SECRET = process.env.JWT_SECRET ?? ''
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || ''
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID)
 
 // ── Validation schemas ──────────────────────────────────────────────────────
 
 const registroSchema = z.object({
-  nombre: z.string().min(1, 'El nombre es requerido'),
-  email: z.string().email('Email inválido'),
+  nombre: z.string().min(1, 'El nombre es requerido').max(100),
+  email: z.string().email('Email inválido').max(255),
   password: z
     .string()
     .min(8, 'La contraseña debe tener al menos 8 caracteres')
+    .max(128, 'La contraseña es demasiado larga')
     .regex(/[A-Z]/, 'La contraseña debe contener al menos una mayúscula')
     .regex(/[a-z]/, 'La contraseña debe contener al menos una minúscula')
     .regex(/[0-9]/, 'La contraseña debe contener al menos un número')
@@ -26,8 +27,8 @@ const registroSchema = z.object({
 })
 
 const loginSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(1, 'La contraseña es requerida'),
+  email: z.string().email('Email inválido').max(255),
+  password: z.string().min(1, 'La contraseña es requerida').max(128),
 })
 
 const googleAuthSchema = z.object({
@@ -207,16 +208,21 @@ export async function verifyEmail(req: Request, res: Response): Promise<void> {
 
 // ── POST /auth/resend-verification ──────────────────────────────────────────
 
-export async function resendVerification(req: Request, res: Response): Promise<void> {
-  const { email } = req.body
+const resendVerificationSchema = z.object({
+  email: z.string().email('Email inválido').max(255),
+})
 
-  if (typeof email !== 'string' || !email) {
-    res.status(400).json({ error: 'Email requerido' })
+export async function resendVerification(req: Request, res: Response): Promise<void> {
+  // Generic response always returned to prevent user enumeration
+  const genericOk = { message: 'Si el email existe, recibirás un nuevo link de verificación.' }
+
+  const parsed = resendVerificationSchema.safeParse(req.body)
+  if (!parsed.success) {
+    res.json(genericOk)
     return
   }
 
-  // Generic response to prevent user enumeration
-  const genericOk = { message: 'Si el email existe, recibirás un nuevo link de verificación.' }
+  const { email } = parsed.data
 
   try {
     const usuario = await prisma.usuario.findUnique({ where: { email } })

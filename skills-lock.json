@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "api-rate-limiting": {
+      "source": "aj-geddes/useful-ai-prompts",
+      "sourceType": "github",
+      "skillPath": "skills/api-rate-limiting/SKILL.md",
+      "computedHash": "9fec48cc40d1b83dbfe337e92239f2e1acce81e9b158547185d61ea78d7c9d70"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",

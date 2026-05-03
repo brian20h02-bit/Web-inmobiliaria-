@@ -8,12 +8,12 @@ const isDev = process.env.NODE_ENV !== 'production'
 
 const crearSchema = z.object({
   propiedadId: z.string().uuid('propiedad_id debe ser un UUID válido'),
-  asunto: z.string().min(1, 'El asunto es requerido'),
-  mensaje: z.string().min(1, 'El mensaje es requerido'),
+  asunto: z.string().min(1, 'El asunto es requerido').max(200),
+  mensaje: z.string().min(1, 'El mensaje es requerido').max(5000),
 });
 
 const responderSchema = z.object({
-  contenido: z.string().min(1, 'El contenido es requerido'),
+  contenido: z.string().min(1, 'El contenido es requerido').max(5000),
 });
 
 // ── Controllers ───────────────────────────────────────────────────────────────

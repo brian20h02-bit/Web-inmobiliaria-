@@ -1,11 +1,7 @@
 import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL || 'postgresql://postgres:2206@localhost:5432/inmobiliaria',
-    },
-  },
-})
+// DATABASE_URL must be set via environment variable.
+// Failing to do so will cause Prisma to throw at startup — intentional.
+const prisma = new PrismaClient()
 
 export default prisma
