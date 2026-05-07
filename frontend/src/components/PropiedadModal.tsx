@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useChat } from '../context/ChatContext'
 import { usePropiedadModal } from '../context/PropiedadModalContext'
 import api from '../lib/api'
+import { formatPrecio as _formatPrecioBase } from '../lib/formatPrecio'
 
 interface PropiedadDetalle {
   id: string
@@ -11,6 +12,7 @@ interface PropiedadDetalle {
   descripcionPublica: string
   tipo: string
   precio?: number | string
+  moneda?: string
   expensas?: number | string | null
   ubicacion?: string
   metrosCuadrados?: number | null
@@ -20,11 +22,11 @@ interface PropiedadDetalle {
   imagenes: string[]
 }
 
-function formatPrecio(precio: number | string | undefined): string {
+function formatPrecio(precio: number | string | undefined, moneda: string = 'USD'): string {
   if (!precio) return ''
   const num = typeof precio === 'string' ? parseFloat(precio) : precio
   if (isNaN(num)) return ''
-  return 'US$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  return _formatPrecioBase(num, moneda)
 }
 
 function formatExpensas(expensas: number | string | null | undefined): string {
@@ -144,7 +146,7 @@ export default function PropiedadModal() {
 
   const badgeClass = prop?.tipo === 'VENTA' ? 'badge-venta' : prop?.tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'
   const badgeLabel = prop?.tipo === 'VENTA' ? 'Venta' : prop?.tipo === 'ALQUILER' ? 'Alquiler' : prop?.tipo
-  const precioStr = formatPrecio(prop?.precio)
+  const precioStr = formatPrecio(prop?.precio, prop?.moneda)
   const expensasStr = prop?.tipo === 'ALQUILER' ? formatExpensas(prop?.expensas) : ''
   const hasMultiple = prop && prop.imagenes && prop.imagenes.length > 1
   const ambientesLabel = prop?.ambientes === 0 ? 'Monoambiente' : prop?.ambientes ? `${prop.ambientes} amb.` : null

@@ -7,6 +7,7 @@ import { useFavoritos } from '../context/FavoritosContext'
 import { useGuardados } from '../context/GuardadosContext'
 
 import api from '../lib/api'
+import { formatPrecio as _formatPrecioBase } from '../lib/formatPrecio'
 
 interface Propiedad {
   id: string
@@ -15,6 +16,7 @@ interface Propiedad {
   descripcionPrivada?: string
   tipo: string
   precio?: number
+  moneda?: string
   expensas?: number | null
   ubicacion?: string
   metrosCuadrados?: number | null
@@ -28,9 +30,9 @@ interface Propiedad {
   fechaPublicacion?: string
 }
 
-function formatPrecio(precio?: number): string {
+function formatPrecio(precio?: number, moneda?: string): string {
   if (!precio) return 'Consultar precio'
-  return 'US$ ' + precio.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  return _formatPrecioBase(precio, moneda ?? 'USD')
 }
 
 function formatExpensas(expensas?: number | null): string {
@@ -310,7 +312,7 @@ export default function PropiedadDetalle() {
           {/* Precio (mobile) */}
           {user && (
             <div className="pd-price-mobile">
-              <span className="pd-price-num">{formatPrecio(propiedad.precio)}</span>
+              <span className="pd-price-num">{formatPrecio(propiedad.precio, propiedad.moneda)}</span>
               {propiedad.tipo === 'ALQUILER' && <span className="pd-price-period">/mes</span>}
               {propiedad.tipo === 'ALQUILER' && expensasStr && (
                 <span className="pd-expensas-txt">+ Expensas: {expensasStr}</span>
@@ -403,7 +405,7 @@ export default function PropiedadDetalle() {
                 <div className="pd-sidebar-price-block">
                   <p className="pd-sidebar-label">Precio</p>
                   <div className="pd-sidebar-price-row">
-                    <span className="pd-sidebar-precio pd-sidebar-precio--dark">{formatPrecio(propiedad.precio)}</span>
+                    <span className="pd-sidebar-precio pd-sidebar-precio--dark">{formatPrecio(propiedad.precio, propiedad.moneda)}</span>
                     {propiedad.tipo === 'ALQUILER' && <span className="pd-sidebar-period">/mes</span>}
                   </div>
                   {propiedad.tipo === 'ALQUILER' && expensasStr && (

@@ -40,6 +40,7 @@ model Propiedad {
   descripcionPrivada String?
   tipo               TipoPropiedad
   precio             Decimal
+  moneda             String        @default("USD")
   expensas           Decimal?
   ubicacion          String
   metrosCuadrados    Int?

@@ -16,6 +16,7 @@ interface Propiedad {
   descripcionPublica: string
   tipo: string
   precio?: number | string
+  moneda?: string
   expensas?: number | string | null
   ubicacion?: string
   metrosCuadrados?: number | null

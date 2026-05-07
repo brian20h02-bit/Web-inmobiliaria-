@@ -4,6 +4,7 @@ import { buildPropertyCardTitle } from '../lib/propertyTitle'
 import { useFavoritos } from '../context/FavoritosContext'
 import { useGuardados } from '../context/GuardadosContext'
 import { usePropiedadModal } from '../context/PropiedadModalContext'
+import { formatPrecio as _formatPrecioBase } from '../lib/formatPrecio'
 
 const cardVariants = {
   rest: { y: 0, scale: 1, boxShadow: '0 1px 8px rgba(0,0,0,0.07)' },
@@ -26,6 +27,7 @@ interface PropiedadCardProps {
   descripcionPublica: string
   tipo: string
   precio?: number | string
+  moneda?: string
   expensas?: number | string | null
   ubicacion?: string
   metrosCuadrados?: number | null
@@ -34,11 +36,11 @@ interface PropiedadCardProps {
   imagenes: string[]
 }
 
-function formatPrecio(precio: number | string | undefined): string {
+function formatPrecio(precio: number | string | undefined, moneda: string = 'USD'): string {
   if (!precio) return ''
   const num = typeof precio === 'string' ? parseFloat(precio) : precio
   if (isNaN(num)) return ''
-  return 'US$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+  return _formatPrecioBase(num, moneda)
 }
 
 function formatExpensas(expensas: number | string | null | undefined): string {
@@ -48,7 +50,7 @@ function formatExpensas(expensas: number | string | null | undefined): string {
   return '$ ' + num.toLocaleString('es-AR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ARS'
 }
 
-export default function PropiedadCard({ id, titulo, descripcionPublica, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, imagenes }: PropiedadCardProps) {
+export default function PropiedadCard({ id, titulo, descripcionPublica, tipo, precio, moneda, expensas, ubicacion, metrosCuadrados, ambientes, banos, imagenes }: PropiedadCardProps) {
   const [imgIdx, setImgIdx] = useState(0)
   const { isFavorito, toggleFavorito } = useFavoritos()
   const { isGuardado, toggleGuardado } = useGuardados()
@@ -57,7 +59,7 @@ export default function PropiedadCard({ id, titulo, descripcionPublica, tipo, pr
   const saved = isGuardado(id)
   const badgeClass = tipo === 'VENTA' ? 'badge-venta' : tipo === 'ALQUILER' ? 'badge-alquiler' : 'badge-otro'
   const displayTitle = buildPropertyCardTitle(tipo, titulo, ubicacion)
-  const precioStr = formatPrecio(precio)
+  const precioStr = formatPrecio(precio, moneda)
   const expensasStr = tipo === 'ALQUILER' ? formatExpensas(expensas) : ''
   const hasMultiple = imagenes && imagenes.length > 1
 

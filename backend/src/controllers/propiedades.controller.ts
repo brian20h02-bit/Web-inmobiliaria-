@@ -43,6 +43,7 @@ const crearPropiedadSchema = z.object({
   contacto: z.string().min(1, 'El contacto es requerido').max(200),
   lat: z.number().min(-90).max(90).optional().nullable(),
   lng: z.number().min(-180).max(180).optional().nullable(),
+  moneda: z.enum(['USD', 'ARS']).default('USD'),
   houseTourUrl: z.string().url('URL de tour inválida').refine(
     (url) => url.startsWith('https://'),
     'Solo se permiten URLs HTTPS'
@@ -72,6 +73,7 @@ export async function listarDestacadas(_req: Request, res: Response): Promise<vo
         descripcionPublica: true,
         tipo: true,
         precio: true,
+        moneda: true,
         expensas: true,
         ubicacion: true,
         metrosCuadrados: true,
@@ -111,6 +113,7 @@ export async function listar(req: Request, res: Response): Promise<void> {
         descripcionPublica: true,
         tipo: true,
         precio: true,
+        moneda: true,
         expensas: true,
         ubicacion: true,
         metrosCuadrados: true,
@@ -149,6 +152,7 @@ export async function obtenerDetalle(req: Request, res: Response): Promise<void>
             descripcionPrivada: req.user.rol === 'ADMINISTRADOR',
             tipo: true,
             precio: true,
+            moneda: true,
             expensas: true,
             ubicacion: true,
             metrosCuadrados: true,
@@ -168,6 +172,7 @@ export async function obtenerDetalle(req: Request, res: Response): Promise<void>
             descripcionPublica: true,
             tipo: true,
             precio: true,
+            moneda: true,
             expensas: true,
             ubicacion: true,
             metrosCuadrados: true,
@@ -220,7 +225,7 @@ export async function crear(req: Request, res: Response): Promise<void> {
       return
     }
 
-    const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, expensas, ubicacion, metrosCuadrados, ambientes, banos, contacto, lat, lng, houseTourUrl } = parsed.data
+    const { titulo, descripcionPublica, descripcionPrivada, tipo, precio, moneda, expensas, ubicacion, metrosCuadrados, ambientes, banos, contacto, lat, lng, houseTourUrl } = parsed.data
     const administradorId = req.user!.id
 
     // Upload new files to Cloudinary
@@ -246,6 +251,7 @@ export async function crear(req: Request, res: Response): Promise<void> {
         descripcionPrivada,
         tipo,
         precio: new Decimal(precio),
+        moneda: moneda ?? 'USD',
         expensas: expensas != null ? new Decimal(expensas) : null,
         ubicacion,
         metrosCuadrados: metrosCuadrados ?? null,

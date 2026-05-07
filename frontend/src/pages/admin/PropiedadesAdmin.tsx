@@ -32,6 +32,7 @@ export default function PropiedadesAdmin() {
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [imagePreviews, setImagePreviews] = useState<string[]>([])
   const [tipo, setTipo] = useState<'VENTA' | 'ALQUILER'>('VENTA')
+  const [moneda, setMoneda] = useState<'USD' | 'ARS'>('USD')
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
   const [precio, setPrecio] = useState('')
@@ -77,7 +78,7 @@ export default function PropiedadesAdmin() {
   function resetForm() {
     setEditingId(null); setExistingImages([])
     setImageFiles([]); setImagePreviews([])
-    setTipo('VENTA'); setTitulo(''); setDescripcion('')
+    setTipo('VENTA'); setMoneda('USD'); setTitulo(''); setDescripcion('')
     setPrecio(''); setExpensas(''); setUbicacion('')
     setMetrosCuadrados(''); setAmbientesMode('multi')
     setAmbientes(''); setBanos(''); setContacto('')
@@ -117,6 +118,7 @@ export default function PropiedadesAdmin() {
       const { data } = await api.get(`/propiedades/${p.id}`)
       setTitulo(data.titulo || '')
       setTipo(data.tipo as 'VENTA' | 'ALQUILER')
+      setMoneda((data.moneda as 'USD' | 'ARS') ?? 'USD')
       setPrecio(data.precio != null ? String(data.precio) : '')
       setExpensas(data.expensas != null ? String(data.expensas) : '')
       setUbicacion(data.ubicacion || '')
@@ -158,6 +160,7 @@ export default function PropiedadesAdmin() {
       formData.append('descripcionPublica', descripcion)
       formData.append('descripcionPrivada', descripcion)
       formData.append('tipo', tipo)
+      formData.append('moneda', moneda)
       formData.append('precio', precio)
       if (tipo === 'ALQUILER' && expensas) formData.append('expensas', expensas)
       formData.append('ubicacion', ubicacion)
@@ -277,6 +280,15 @@ export default function PropiedadesAdmin() {
                 </div>
               </div>
 
+              {/* ── Moneda ── */}
+              <div className="form-group">
+                <label>Moneda del precio *</label>
+                <div className="tipo-selector">
+                  <button type="button" className={`tipo-btn${moneda === 'USD' ? ' active' : ''}`} onClick={() => setMoneda('USD')}>USD (Dólares)</button>
+                  <button type="button" className={`tipo-btn${moneda === 'ARS' ? ' active' : ''}`} onClick={() => setMoneda('ARS')}>ARS (Pesos)</button>
+                </div>
+              </div>
+
               {/* ── Título ── */}
               <div className="form-group">
                 <label>Título *</label>
@@ -286,7 +298,7 @@ export default function PropiedadesAdmin() {
               {/* ── Precio + Expensas ── */}
               <div className="form-row">
                 <div className="form-group">
-                  <label>{tipo === 'ALQUILER' ? 'Precio mensual (USD) *' : 'Precio total (USD) *'}</label>
+                  <label>{tipo === 'ALQUILER' ? `Precio mensual (${moneda}) *` : `Precio total (${moneda}) *`}</label>
                   <input className="form-input" type="number" min="1" value={precio} onChange={(e) => setPrecio(e.target.value)} placeholder={tipo === 'ALQUILER' ? 'Ej: 800' : 'Ej: 150000'} required />
                 </div>
                 {tipo === 'ALQUILER' && (
